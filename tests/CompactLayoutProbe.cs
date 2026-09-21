@@ -24,6 +24,7 @@ namespace Autoclicker
                 form.Show();
                 float factor = dpi / form.CurrentAutoScaleDimensions.Width;
                 form.Scale(new SizeF(factor, factor));
+                form.PerformLayout();
                 var clicker = Field<Panel>(form, "clickerPage");
                 var crosshair = Field<CrosshairSettingsControl>(form, "crosshairSettings");
                 var controller = Field<CrosshairController>(form, "crosshair");
@@ -39,8 +40,17 @@ namespace Autoclicker
                 controller.SetEnabled(false);
                 for (int i = 0; i < 4; i++) { crosshairTab.PerformClick(); clickerTab.PerformClick(); }
                 Check(Application.OpenForms.Count == windows + 1, "Tab switches must reuse the one overlay, never create settings windows.");
-                foreach (Control page in new Control[] { form, clicker, crosshair })
+                foreach (Control page in new Control[] { form, clicker, crosshair, Field<Panel>(form, "footerPanel") })
                     CheckBounds(page, dpi);
+                Panel viewport = Field<Panel>(form, "settingsViewport"), footer = Field<Panel>(form, "footerPanel");
+                int fullHeight = form.Height;
+                form.Height = Math.Max(420, (int)(480 * dpi / 96F));
+                form.PerformLayout();
+                Check(viewport.Bottom < footer.Top && footer.Bottom <= form.ClientSize.Height &&
+                    viewport.Height < crosshair.Height && viewport.VerticalScroll.Visible,
+                    "Short windows must scroll settings and keep the Stop/update footer visible.");
+                form.Height = fullHeight;
+                form.PerformLayout();
                 foreach (bool showCrosshair in new[] { false, true })
                 {
                     (showCrosshair ? crosshairTab : clickerTab).PerformClick();

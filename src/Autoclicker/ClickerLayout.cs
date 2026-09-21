@@ -7,6 +7,7 @@ namespace Autoclicker
     internal sealed partial class ClickerForm
     {
         private Panel clickerPage;
+        private Panel settingsViewport, footerPanel;
         private Button clickerTab, crosshairTab;
 
         private void BuildInterface()
@@ -48,9 +49,13 @@ namespace Autoclicker
             clickerTab.Click += delegate { SelectPage(false); };
             crosshairTab.Click += delegate { SelectPage(true); };
 
+            settingsViewport = new Panel { BackColor = BackColor, AutoScroll = true };
+            settingsViewport.SetBounds(20, 124, 438, 320);
+            Controls.Add(settingsViewport);
+
             clickerPage = new Panel { BackColor = BackColor };
-            clickerPage.SetBounds(20, 124, 420, 320);
-            Controls.Add(clickerPage);
+            clickerPage.SetBounds(0, 0, 420, 320);
+            settingsViewport.Controls.Add(clickerPage);
             AddLabel(clickerPage, "Session clicks", 0, 8, 200, 24, 9F, muted, false);
             counter = AddLabel(clickerPage, "0", 284, 0, 136, 34, 18F, ForeColor, false);
             counter.TextAlign = ContentAlignment.MiddleRight;
@@ -113,26 +118,31 @@ namespace Autoclicker
             UpdateAutoStopHint(clock.ElapsedMilliseconds);
 
             crosshairSettings = new CrosshairSettingsControl(crosshair);
-            crosshairSettings.SetBounds(20, 124, 420, 320);
+            crosshairSettings.SetBounds(0, 0, 420, 320);
             crosshairSettings.Visible = false;
-            Controls.Add(crosshairSettings);
+            settingsViewport.Controls.Add(crosshairSettings);
             crosshairToggle = crosshairSettings.Toggle;
 
-            detail = AddLabel(this, "Left clicks at your cursor.", 20, 454, 420, 30, 8F, muted, false);
+            footerPanel = new Panel { BackColor = BackColor };
+            footerPanel.SetBounds(20, 454, 420, 150);
+            Controls.Add(footerPanel);
+            detail = AddLabel(footerPanel, "Left clicks at your cursor.", 0, 0, 420, 30, 8F, muted, false);
             crosshairSettings.Error += delegate(string message) { detail.Text = message; };
-            startHint = AddLabel(this, "Press " + KeyName + " to start", 20, 492, 274, 36, 10F, soft, false);
+            startHint = AddLabel(footerPanel, "Press " + KeyName + " to start", 0, 38, 274, 36, 10F, soft, false);
             startHint.TextAlign = ContentAlignment.MiddleLeft;
             startHint.AccessibleRole = AccessibleRole.StaticText;
             startHint.TabStop = false;
-            stop = MakeButton("Stop", 318, 488, 122, AppColors.DangerBackground, AppColors.Danger);
+            stop = MakeButton("Stop", 298, 34, 122, AppColors.DangerBackground, AppColors.Danger);
+            stop.Parent = footerPanel;
             stop.Height = 38;
             stop.FlatAppearance.BorderColor = AppColors.DangerBorder;
             stop.Click += delegate { if (choosingKey) CancelKeyCapture(); else StopClicking(StoppedMessage); };
 
-            AddDivider(this, 20, 542, 420, 1);
-            updateStatus = AddLabel(this, "Checks for updates on launch", 20, 552, 266, 32, 8F, muted, false);
-            AddLabel(this, "v" + AppInfo.Version, 20, 587, 200, 15, 7F, muted, false);
-            checkUpdates = MakeButton("Check for updates", 294, 551, 146, AppColors.Button, soft);
+            AddDivider(footerPanel, 0, 88, 420, 1);
+            updateStatus = AddLabel(footerPanel, "Checks for updates on launch", 0, 98, 266, 32, 8F, muted, false);
+            AddLabel(footerPanel, "v" + AppInfo.Version, 0, 133, 200, 15, 7F, muted, false);
+            checkUpdates = MakeButton("Check for updates", 274, 97, 146, AppColors.Button, soft);
+            checkUpdates.Parent = footerPanel;
             checkUpdates.Height = 32;
             checkUpdates.Enabled = false;
             checkUpdates.Click += async delegate
@@ -149,11 +159,32 @@ namespace Autoclicker
             };
         }
 
+        protected override void OnLayout(LayoutEventArgs e)
+        {
+            base.OnLayout(e);
+            if (settingsViewport == null || footerPanel == null) return;
+            float scale = ClientSize.Width / 460F;
+            footerPanel.Top = ClientSize.Height - footerPanel.Height - (int)Math.Round(6 * scale);
+            settingsViewport.Height = Math.Max(1, footerPanel.Top - settingsViewport.Top - (int)Math.Round(10 * scale));
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            // A small or highly scaled display may have less room than the
+            // natural window height. Keep actions visible and scroll settings.
+            Rectangle area = Screen.FromControl(this).WorkingArea;
+            Height = Math.Min(Height, area.Height - 24);
+            Top = Math.Max(area.Top + 12, Math.Min(Top, area.Bottom - Height - 12));
+            PerformLayout();
+            base.OnShown(e);
+        }
+
         private void SelectPage(bool showCrosshair)
         {
             InputCommit.CommitOutside(this, null);
             if (choosingKey) CancelKeyCapture();
             crosshair.Save();
+            settingsViewport.AutoScrollPosition = Point.Empty;
             clickerPage.Visible = !showCrosshair;
             crosshairSettings.Visible = showCrosshair;
             clickerTab.BackColor = showCrosshair ? BackColor : AppColors.Raised;
