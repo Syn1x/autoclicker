@@ -1,0 +1,17 @@
+artifacts/
+bin/
+obj/
+.vs/
+*.user
+*.settings
+*.pfx
+*.p12
+*.key
+*.log
+*.tmp
+*.zip
+*.nupkg
+*.exe
+*.dll
+*.pdb
+

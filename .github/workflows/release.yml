@@ -1,0 +1,52 @@
+name: Publish release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New version (for example 1.0.1)'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Validate release version
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Use a version such as 1.0.1.' }
+          $releases = gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read existing releases.' }
+          foreach ($release in $releases) {
+            if (-not $release.draft -and -not $release.prerelease -and $release.tag_name -match '^v(\d+\.\d+\.\d+)$') {
+              if ([version]$env:RELEASE_VERSION -le [version]$Matches[1]) { throw 'Choose a version newer than published releases.' }
+            }
+          }
+      - name: Build, test and package
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: ./scripts/build.ps1 -Version $env:RELEASE_VERSION -BuildRoot "$env:RUNNER_TEMP/autoclicker-build" -Package
+      - name: Publish installer and update feed
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $releaseDir = "$env:RUNNER_TEMP/autoclicker-build/releases-$env:RELEASE_VERSION"
+          $assets = @(Get-ChildItem -LiteralPath $releaseDir -File | ForEach-Object { $_.FullName })
+          gh release create "v$env:RELEASE_VERSION" @assets --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "Autoclicker $env:RELEASE_VERSION" --notes-file RELEASE-NOTES.md --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }

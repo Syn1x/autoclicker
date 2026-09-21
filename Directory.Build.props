@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <BuildRoot Condition="'$(BuildRoot)' == ''">$(MSBuildThisFileDirectory)artifacts</BuildRoot>
+    <BaseOutputPath>$(BuildRoot)/bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(BuildRoot)/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+</Project>
