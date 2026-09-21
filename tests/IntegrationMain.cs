@@ -27,6 +27,7 @@ namespace Autoclicker
             }
             try
             {
+                Native.SetProcessDPIAware();
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 string root = Path.GetFullPath(args[0]);
@@ -40,7 +41,8 @@ namespace Autoclicker
                         new object[] { new string[] { Path.Combine(root, probe.Name + ".txt") } });
                     Check(code == 0, probe.Name + " failed.");
                 }
-                Console.WriteLine("PASS: standalone EXE, real self-update helper, update validation/cancellation, engine, keyboard, timer, settings, close, checkbox repaint. No real input sent.");
+                CrosshairProbe.Run(root);
+                Console.WriteLine("PASS: standalone EXE, real self-update helper, update validation/cancellation, engine, keyboard, timer, settings, close, checkbox repaint, crosshair styles/color/click-through/focus/lifecycle. No real input sent.");
                 return 0;
             }
             catch (Exception error) { Console.Error.WriteLine(error); return 1; }

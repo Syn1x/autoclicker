@@ -102,7 +102,7 @@ namespace Autoclicker
                         if (candidate.Id == current.Id) continue;
                         try
                         {
-                            IntPtr window = candidate.MainWindowHandle;
+                            IntPtr window = Native.FindMainWindow(candidate.Id);
                             if (window == IntPtr.Zero) continue;
                             Native.ShowWindowAsync(window, 9); // Restore if minimized.
                             Native.SetForegroundWindow(window);
@@ -230,6 +230,9 @@ namespace Autoclicker
         private Label updateStatus;
         private Button checkUpdates;
         private UpdateCoordinator updates;
+        private readonly CrosshairController crosshair;
+        private CheckBox crosshairToggle;
+        private CrosshairSettingsForm crosshairSettings;
 
         private string KeyName { get { return KeyBindings.DisplayName(toggleKey); } }
         private string StoppedMessage { get { return "Stopped. " + KeyName + " starts again."; } }
@@ -242,6 +245,7 @@ namespace Autoclicker
             enableHotkeys = hooks;
             settingsPath = configurationPath;
             toggleKey = KeySettings.Load(settingsPath);
+            crosshair = new CrosshairController(settingsPath);
             Text = "Autoclicker";
             using (Stream iconStream = typeof(ClickerForm).Assembly.GetManifestResourceStream("Autoclicker.AppIcon.ico"))
             {
@@ -276,7 +280,37 @@ namespace Autoclicker
             close.Click += delegate { Close(); };
 
             StyledPanel toolbar = MakePanel(this, 1, 74, 618, 39, AppColors.Header);
-            AddLabel(toolbar, "MOUSE CONTROL", 18, 12, 220, 18, 8F, soft, true);
+            AddLabel(toolbar, "MOUSE CONTROL", 18, 12, 150, 18, 8F, soft, true);
+            crosshairToggle = new LargeCheckBox();
+            crosshairToggle.SetBounds(176, 4, 137, 30);
+            crosshairToggle.Text = "Crosshair";
+            crosshairToggle.ForeColor = soft;
+            crosshairToggle.AccessibleName = "Show crosshair overlay";
+            toolbar.Controls.Add(crosshairToggle);
+            crosshairToggle.CheckedChanged += delegate
+            {
+                if (crosshairToggle.Checked == crosshair.Enabled) return;
+                try { crosshair.SetEnabled(crosshairToggle.Checked); }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    crosshairToggle.Checked = false;
+                    detail.Text = "Windows could not display the crosshair. Try again.";
+                }
+            };
+            crosshair.Changed += delegate { crosshairToggle.Checked = crosshair.Enabled; };
+            Button customize = MakeButton("Customize", 316, 7, 112, AppColors.Button, soft);
+            customize.Parent = toolbar;
+            customize.Height = 25;
+            customize.AccessibleName = "Customize crosshair";
+            customize.Click += delegate
+            {
+                if (choosingKey) CancelKeyCapture();
+                StopClicking(StoppedMessage);
+                if (crosshairSettings == null || crosshairSettings.IsDisposed)
+                    crosshairSettings = new CrosshairSettingsForm(crosshair);
+                crosshairSettings.Show(this);
+                crosshairSettings.Activate();
+            };
             status = AddLabel(toolbar, "STOPPED", 456, 8, 140, 23, 8F, muted, true);
             status.TextAlign = ContentAlignment.MiddleCenter;
             status.BackColor = AppColors.Button;
@@ -391,7 +425,7 @@ namespace Autoclicker
 
             timer.Interval = 15;
             timer.Tick += OnTick;
-            FormClosing += delegate { StopClicking("Stopped."); };
+            FormClosing += delegate { StopClicking("Stopped."); crosshair.SetEnabled(false); };
             Deactivate += delegate { if (choosingKey) CancelKeyCapture(); };
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
@@ -709,7 +743,12 @@ namespace Autoclicker
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { engine.Stop(); timer.Dispose(); }
+            if (disposing)
+            {
+                engine.Stop(); timer.Dispose();
+                if (crosshairSettings != null) { crosshairSettings.Dispose(); crosshairSettings = null; }
+                crosshair.Dispose();
+            }
             base.Dispose(disposing);
             if (disposing)
             {
@@ -1097,6 +1136,31 @@ namespace Autoclicker
         [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(Point point);
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+        private delegate bool EnumWindowCallback(IntPtr window, IntPtr parameter);
+        [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowCallback callback, IntPtr parameter);
+        [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr window);
+        [DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr window, int index);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetWindowText(IntPtr window, System.Text.StringBuilder title, int maximum);
+
+        internal static IntPtr FindMainWindow(int processId)
+        {
+            IntPtr found = IntPtr.Zero;
+            EnumWindows(delegate(IntPtr window, IntPtr parameter)
+            {
+                uint pid;
+                GetWindowThreadProcessId(window, out pid);
+                if (pid != (uint)processId || !IsWindowVisible(window) || (GetWindowLong(window, -20) & 0x08000000) != 0)
+                    return true;
+                var title = new System.Text.StringBuilder(256);
+                GetWindowText(window, title, title.Capacity);
+                if (title.ToString() != "Autoclicker" && !title.ToString().StartsWith("Autoclicker - Clicking (", StringComparison.Ordinal))
+                    return true;
+                found = window;
+                return false;
+            }, IntPtr.Zero);
+            return found;
+        }
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct Input { public uint Type; public InputUnion Data; }

@@ -1,13 +1,13 @@
-Autoclicker 1.1.0 is a single portable, self-updating EXE.
+Autoclicker 1.2.0 adds a customizable crosshair overlay to the single portable EXE.
 
-Download **autoclicker.exe**, double-click it, and share that same file with other people. No installation or ZIP extraction is needed.
+- Toggle **Crosshair** in the top bar; select **Customize** for its controls.
+- Choose a dot, cross, open cross, circle, or circle with a dot.
+- Pick a color with the rainbow slider, adjust the size, and optionally add a dark outline.
+- Select the monitor to use. The overlay is centered on that screen and allows mouse input to pass through.
+- Runs independently of clicking, stays visible when the app is minimized, and closes completely with the app.
+- Remembers your appearance preferences; the overlay starts off each launch.
+- Uses no continuous redraw loop and adds no external DLLs or installation step.
 
-- Runs from its current folder with no adjacent DLLs, updater executable, or configuration file required.
-- Checks for updates on launch and replaces the same EXE after you close the app.
-- Validates the update's SHA-256 hash, size, application identity, and version before replacement.
-- Keeps the Cypress Dynamics taskbar icon, neutral dark colors, configurable hotkey, stop timer, and sound cues.
-- Saves your keyboard binding separately so updates preserve it and sharing the EXE does not share your settings.
+Use windowed or borderless games; exclusive fullscreen may hide desktop overlays.
 
-**Existing 1.0.x users:** close your old copy and download this EXE once. The new standalone updater is used from this version onward.
-
-Only the EXE is needed. The JSON and checksum files are for the automatic updater. Windows 10/11 with .NET Framework 4.8 is required; keep the EXE in a writable folder. The release is unsigned.
+**Existing 1.1.0 users:** check for updates, wait for “v1.2.0 ready / applies on close,” then close and reopen Autoclicker. Or download **autoclicker.exe** directly. It is still the complete app and the only file you need to share.
