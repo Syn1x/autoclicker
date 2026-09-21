@@ -1,10 +1,10 @@
-Autoclicker 1.0.1 includes dependency license notices in installed and portable builds.
-The automatic update features introduced in 1.0.0 are included:
+Autoclicker 1.0.2 refreshes the interface with the ChatGPT/Codex client's neutral dark color scheme.
 
-- Downloads updates on launch and installs them when the app closes.
-- Shows the installed version and includes a manual update check.
-- Preserves the selected keyboard binding across updates.
-- Includes the configurable start/stop key, one-minute default stop timer, sound cues and larger checkboxes with corrected redraw behavior.
+- Charcoal backgrounds, gray panels and borders, and soft white text.
+- Neutral checked and unchecked controls, with a bright status badge while clicking.
+- Red Stop control and amber key-binding warnings remain easy to identify.
+
+Keyboard controls, the default stop timer, sound cues, and automatic updates work as before. Existing installations receive this update on their next check and apply it when the app closes. The saved keyboard binding is preserved.
 
 Download the Setup.exe installer, or extract the complete portable ZIP. Existing standalone EXE users need this download once to enable future automatic updates.
 

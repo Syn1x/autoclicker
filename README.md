@@ -31,7 +31,7 @@ Install the .NET 9 SDK (or a compatible newer SDK) and use PowerShell on Windows
 
 ```powershell
 ./scripts/build.ps1
-./scripts/build.ps1 -Version 1.0.1 -Package
+./scripts/build.ps1 -Version 1.0.2 -Package
 ```
 
 The script restores locked dependencies, builds, runs non-clicking tests, and optionally packages an installer, portable ZIP, update packages and feed. Build files go into `artifacts/`, or a directory supplied with `-BuildRoot`.
@@ -40,7 +40,7 @@ The script restores locked dependencies, builds, runs non-clicking tests, and op
 
 1. Edit `RELEASE-NOTES.md` to describe the new release.
 2. Commit and push the code and release notes to `main`.
-3. In **Actions → Publish release → Run workflow**, enter a new version such as `1.0.1`.
+3. In **Actions → Publish release → Run workflow**, enter a new version such as `1.0.2`.
 4. The workflow tests, packages and publishes the installer and update feed. Existing users receive it on their next update check.
 
 The workflow uses GitHub's temporary repository token. The distributed app contains no GitHub credentials and downloads public releases without a login. Publishing a newer version is the update trigger; a normal code push only builds and tests.

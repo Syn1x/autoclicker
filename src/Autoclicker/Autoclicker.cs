@@ -11,6 +11,29 @@ using System.Windows.Forms;
 
 namespace Autoclicker
 {
+    // Neutral dark palette shared across the form and custom-painted controls.
+    internal static class AppColors
+    {
+        internal static readonly Color Background = Color.FromArgb(24, 24, 24);
+        internal static readonly Color Header = Color.FromArgb(19, 19, 19);
+        internal static readonly Color Inset = Color.FromArgb(28, 28, 28);
+        internal static readonly Color Surface = Color.FromArgb(33, 33, 33);
+        internal static readonly Color Raised = Color.FromArgb(40, 40, 40);
+        internal static readonly Color Button = Color.FromArgb(48, 48, 48);
+        internal static readonly Color Border = Color.FromArgb(51, 51, 51);
+        internal static readonly Color ControlBorder = Color.FromArgb(65, 65, 65);
+        internal static readonly Color Text = Color.FromArgb(223, 223, 223);
+        internal static readonly Color SecondaryText = Color.FromArgb(185, 185, 185);
+        internal static readonly Color MutedText = Color.FromArgb(159, 159, 159);
+        internal static readonly Color DisabledText = Color.FromArgb(118, 118, 118);
+        internal static readonly Color Selection = Color.FromArgb(237, 237, 237);
+        internal static readonly Color InverseText = Color.FromArgb(24, 24, 24);
+        internal static readonly Color Warning = Color.FromArgb(255, 184, 108);
+        internal static readonly Color Danger = Color.FromArgb(255, 103, 100);
+        internal static readonly Color DangerBackground = Color.FromArgb(53, 33, 32);
+        internal static readonly Color DangerBorder = Color.FromArgb(102, 59, 58);
+    }
+
     internal static class Program
     {
         [STAThread]
@@ -181,9 +204,9 @@ namespace Autoclicker
         private readonly Stopwatch clock = Stopwatch.StartNew();
         private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
         private readonly ClickEngine engine = new ClickEngine(Native.LeftClick);
-        private readonly Color accent = Color.FromArgb(34, 196, 117);
-        private readonly Color muted = Color.FromArgb(112, 121, 130);
-        private readonly Color soft = Color.FromArgb(182, 189, 197);
+        private readonly Color accent = AppColors.InverseText;
+        private readonly Color muted = AppColors.MutedText;
+        private readonly Color soft = AppColors.SecondaryText;
         private Label status;
         private Label detail;
         private Label counter;
@@ -221,14 +244,14 @@ namespace Autoclicker
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.None;
             MaximizeBox = false;
-            BackColor = Color.FromArgb(12, 15, 18);
-            ForeColor = Color.FromArgb(232, 235, 238);
+            BackColor = AppColors.Background;
+            ForeColor = AppColors.Text;
             Font = new Font("Segoe UI", 9F);
             DoubleBuffered = true;
 
             Panel topbar = new Panel();
             topbar.SetBounds(1, 3, 618, 71);
-            topbar.BackColor = Color.FromArgb(11, 14, 16);
+            topbar.BackColor = AppColors.Header;
             Controls.Add(topbar);
             Label title = AddLabel(topbar, "Autoclicker", 18, 21, 485, 34, 18F, ForeColor, false);
             AttachWindowDrag(topbar);
@@ -244,17 +267,17 @@ namespace Autoclicker
             close.AccessibleName = "Close Autoclicker";
             close.Click += delegate { Close(); };
 
-            StyledPanel toolbar = MakePanel(this, 1, 74, 618, 39, Color.FromArgb(11, 14, 16));
+            StyledPanel toolbar = MakePanel(this, 1, 74, 618, 39, AppColors.Header);
             AddLabel(toolbar, "MOUSE CONTROL", 18, 12, 220, 18, 8F, soft, true);
             status = AddLabel(toolbar, "STOPPED", 456, 8, 140, 23, 8F, muted, true);
             status.TextAlign = ContentAlignment.MiddleCenter;
-            status.BackColor = Color.FromArgb(21, 26, 31);
+            status.BackColor = AppColors.Button;
             AddLabel(this, "CURRENT SESSION", 20, 133, 300, 18, 7.5F, muted, true);
             Label module = AddLabel(this, "INPUT / 01", 460, 132, 140, 20, 8F, muted, false);
             module.Font = new Font("Consolas", 8F);
             module.TextAlign = ContentAlignment.MiddleRight;
 
-            StyledPanel telemetry = MakePanel(this, 20, 157, 580, 92, Color.FromArgb(10, 13, 16));
+            StyledPanel telemetry = MakePanel(this, 20, 157, 580, 92, AppColors.Inset);
             AddDivider(telemetry, 193, 0, 1, 92);
             AddDivider(telemetry, 386, 0, 1, 92);
             AddLabel(telemetry, "TARGET RATE", 14, 13, 163, 18, 7.5F, muted, true);
@@ -268,8 +291,8 @@ namespace Autoclicker
             AddLabel(telemetry, "AT CURSOR", 400, 69, 163, 15, 7F, muted, false);
 
             AddLabel(this, "CLICK SETTINGS", 20, 271, 300, 18, 7.5F, muted, true);
-            StyledPanel speedPanel = MakePanel(this, 20, 294, 282, 129, Color.FromArgb(14, 17, 20));
-            StyledPanel variationPanel = MakePanel(this, 314, 294, 286, 129, Color.FromArgb(14, 17, 20));
+            StyledPanel speedPanel = MakePanel(this, 20, 294, 282, 129, AppColors.Surface);
+            StyledPanel variationPanel = MakePanel(this, 314, 294, 286, 129, AppColors.Surface);
             AddLabel(speedPanel, "Click interval", 14, 13, 220, 22, 9F, soft, false);
             interval = new NumericUpDown();
             interval.SetBounds(16, 47, 137, 35);
@@ -278,7 +301,7 @@ namespace Autoclicker
             interval.Increment = 10;
             interval.Value = 50;
             interval.Font = new Font("Consolas", 19F);
-            interval.BackColor = Color.FromArgb(9, 12, 14);
+            interval.BackColor = AppColors.Background;
             interval.ForeColor = ForeColor;
             interval.BorderStyle = BorderStyle.FixedSingle;
             interval.AccessibleName = "Click interval in milliseconds";
@@ -298,15 +321,15 @@ namespace Autoclicker
             timingHint = AddLabel(variationPanel, "", 14, 99, 260, 18, 8F, muted, false);
             UpdateRate();
 
-            StyledPanel keyPanel = MakePanel(this, 20, 436, 580, 61, Color.FromArgb(14, 17, 20));
+            StyledPanel keyPanel = MakePanel(this, 20, 436, 580, 61, AppColors.Surface);
             AddLabel(keyPanel, "START / STOP KEY", 14, 9, 300, 17, 7.5F, muted, true);
             bindingValue = AddLabel(keyPanel, KeyName, 12, 29, 305, 26, 12F, soft, true);
-            changeKey = MakeButton("Change key", 352, 13, 114, Color.FromArgb(22, 28, 33), soft);
+            changeKey = MakeButton("Change key", 352, 13, 114, AppColors.Button, soft);
             changeKey.Parent = keyPanel;
             changeKey.Height = 35;
             changeKey.AccessibleName = "Change start and stop key";
             changeKey.Click += delegate { if (choosingKey) CancelKeyCapture(); else BeginKeyCapture(); };
-            resetKey = MakeButton("Reset F11", 476, 13, 90, Color.FromArgb(14, 17, 20), muted);
+            resetKey = MakeButton("Reset F11", 476, 13, 90, AppColors.Surface, muted);
             resetKey.Parent = keyPanel;
             resetKey.Height = 35;
             resetKey.Click += delegate
@@ -316,7 +339,7 @@ namespace Autoclicker
                 ApplyBinding((int)Keys.F11);
             };
 
-            StyledPanel autoStopPanel = MakePanel(this, 20, 510, 580, 82, Color.FromArgb(14, 17, 20));
+            StyledPanel autoStopPanel = MakePanel(this, 20, 510, 580, 82, AppColors.Surface);
             autoStop = new LargeCheckBox();
             autoStop.SetBounds(14, 10, 185, 30);
             autoStop.Text = "Stop after";
@@ -335,25 +358,25 @@ namespace Autoclicker
             UpdateAutoStopControls();
             UpdateAutoStopHint(clock.ElapsedMilliseconds);
 
-            StyledPanel messagePanel = MakePanel(this, 20, 605, 580, 43, Color.FromArgb(16, 29, 24));
-            messagePanel.LineColor = Color.FromArgb(36, 64, 53);
+            StyledPanel messagePanel = MakePanel(this, 20, 605, 580, 43, AppColors.Raised);
+            messagePanel.LineColor = AppColors.Border;
             detail = AddLabel(messagePanel, "Hover over the team button, then press " + KeyName + " to start.",
-                12, 10, 554, 29, 9F, Color.FromArgb(145, 183, 163), false);
+                12, 10, 554, 29, 9F, AppColors.SecondaryText, false);
             startHint = AddLabel(this, "Press " + KeyName + " to start", 20, 660, 366, 43,
-                9F, Color.FromArgb(145, 183, 163), true);
-            startHint.BackColor = Color.FromArgb(16, 29, 24);
+                9F, AppColors.SecondaryText, true);
+            startHint.BackColor = AppColors.Raised;
             startHint.TextAlign = ContentAlignment.MiddleCenter;
             startHint.AccessibleRole = AccessibleRole.StaticText;
             startHint.TabStop = false;
-            stop = MakeButton("STOP", 400, 660, 200, Color.FromArgb(54, 31, 32), Color.FromArgb(240, 170, 170));
-            stop.FlatAppearance.BorderColor = Color.FromArgb(120, 65, 65);
+            stop = MakeButton("STOP", 400, 660, 200, AppColors.DangerBackground, AppColors.Danger);
+            stop.FlatAppearance.BorderColor = AppColors.DangerBorder;
             stop.Click += delegate { if (choosingKey) CancelKeyCapture(); else StopClicking(StoppedMessage); };
             AddDivider(this, 1, 718, 618, 1);
             shortcutFooter = AddLabel(this, KeyName + "   Toggle on / off", 20, 732, 430, 18, 8F, muted, false);
             Label version = AddLabel(this, "v" + AppInfo.Version, 470, 732, 130, 18, 8F, muted, false);
             version.TextAlign = ContentAlignment.MiddleRight;
             updateStatus = AddLabel(this, "Updates check automatically on launch", 20, 768, 435, 18, 8F, muted, false);
-            checkUpdates = MakeButton("Check for updates", 466, 758, 134, Color.FromArgb(22, 28, 33), soft);
+            checkUpdates = MakeButton("Check for updates", 466, 758, 134, AppColors.Button, soft);
             checkUpdates.Height = 29;
             checkUpdates.Enabled = false;
             checkUpdates.Click += async delegate { if (updates != null) await updates.CheckAsync(); };
@@ -398,7 +421,7 @@ namespace Autoclicker
             changeKey.Text = "Cancel";
             bindingValue.Text = "Press and release a key...";
             status.Text = "BINDING";
-            status.ForeColor = Color.FromArgb(228, 173, 47);
+            status.ForeColor = AppColors.Warning;
             detail.Text = "Press and release your new key. Click Cancel to keep " + KeyName + ".";
         }
 
@@ -453,7 +476,7 @@ namespace Autoclicker
             input.Maximum = maximum;
             input.Value = value;
             input.Font = new Font("Consolas", 14F);
-            input.BackColor = Color.FromArgb(9, 12, 14);
+            input.BackColor = AppColors.Background;
             input.ForeColor = ForeColor;
             input.BorderStyle = BorderStyle.FixedSingle;
             input.AccessibleName = name;
@@ -497,7 +520,7 @@ namespace Autoclicker
         {
             Panel line = new Panel();
             line.SetBounds(x, y, w, h);
-            line.BackColor = Color.FromArgb(31, 35, 39);
+            line.BackColor = AppColors.Border;
             parent.Controls.Add(line);
         }
 
@@ -514,9 +537,9 @@ namespace Autoclicker
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            using (Pen border = new Pen(Color.FromArgb(55, 64, 70)))
+            using (Pen border = new Pen(AppColors.ControlBorder))
                 e.Graphics.DrawRectangle(border, 0, 0, ClientSize.Width - 1, ClientSize.Height - 1);
-            using (Pen topLine = new Pen(Color.FromArgb(133, 148, 158), 2))
+            using (Pen topLine = new Pen(AppColors.ControlBorder, 2))
                 e.Graphics.DrawLine(topLine, 1, 1, ClientSize.Width - 2, 1);
         }
 
@@ -542,7 +565,7 @@ namespace Autoclicker
             button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderSize = 1;
-            button.FlatAppearance.BorderColor = Color.FromArgb(43, 51, 60);
+            button.FlatAppearance.BorderColor = AppColors.ControlBorder;
             button.FlatAppearance.MouseOverBackColor = Color.FromArgb(
                 Math.Min(255, bg.R + 8), Math.Min(255, bg.G + 8), Math.Min(255, bg.B + 8));
             button.Cursor = Cursors.Hand;
@@ -573,7 +596,7 @@ namespace Autoclicker
             {
                 startHint.Text = "Shortcut unavailable";
                 status.Text = "KEY ERROR";
-                status.ForeColor = Color.FromArgb(228, 173, 47);
+                status.ForeColor = AppColors.Warning;
                 detail.Text = "Windows could not enable the shortcut. Reopen Autoclicker to retry.";
             }
         }
@@ -620,7 +643,7 @@ namespace Autoclicker
             variation.Enabled = false;
             startHint.Text = "Press " + KeyName + " to stop";
             status.ForeColor = accent;
-            status.BackColor = Color.FromArgb(16, 37, 26);
+            status.BackColor = AppColors.Selection;
             status.Text = "CLICKING";
             detail.Text = "Clicking at your cursor. Press " + KeyName + " again to stop.";
             counter.Text = "0";
@@ -645,7 +668,7 @@ namespace Autoclicker
             if (enableHotkeys && (hotkeys == null || !hotkeys.Active)) return;
             status.Text = "STOPPED";
             status.ForeColor = muted;
-            status.BackColor = Color.FromArgb(21, 26, 31);
+            status.BackColor = AppColors.Button;
             detail.Text = reason;
             Text = "Autoclicker";
         }
@@ -817,15 +840,15 @@ namespace Autoclicker
             int size = (int)Math.Round(20F * scale);
             int top = (Height - size) / 2;
             Rectangle box = new Rectangle(0, top, size - 1, size - 1);
-            Color lineColor = !Enabled ? Color.FromArgb(64, 73, 81)
-                : Checked ? Color.FromArgb(87, 161, 122) : Color.FromArgb(112, 121, 130);
-            Color fillColor = Checked && Enabled ? Color.FromArgb(24, 57, 47) : Color.FromArgb(12, 16, 19);
+            Color lineColor = !Enabled ? AppColors.ControlBorder
+                : Checked ? AppColors.Selection : AppColors.MutedText;
+            Color fillColor = Checked && Enabled ? AppColors.Selection : AppColors.Background;
             using (SolidBrush fill = new SolidBrush(fillColor)) e.Graphics.FillRectangle(fill, box);
             using (Pen border = new Pen(lineColor)) e.Graphics.DrawRectangle(border, box);
             if (Checked)
             {
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                using (Pen check = new Pen(Enabled ? Color.FromArgb(189, 246, 222) : Color.FromArgb(91, 102, 111), 2F * scale))
+                using (Pen check = new Pen(Enabled ? AppColors.InverseText : AppColors.DisabledText, 2F * scale))
                     e.Graphics.DrawLines(check, new PointF[] {
                         new PointF(size * 0.23F, top + size * 0.49F),
                         new PointF(size * 0.43F, top + size * 0.70F),
@@ -834,7 +857,7 @@ namespace Autoclicker
             int textLeft = size + (int)Math.Round(8F * scale);
             TextRenderer.DrawText(e.Graphics, Text, Font,
                 new Rectangle(textLeft, 0, Math.Max(0, Width - textLeft), Height),
-                Enabled ? ForeColor : Color.FromArgb(91, 102, 111),
+                Enabled ? ForeColor : AppColors.DisabledText,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
             if (Focused && ShowFocusCues)
                 ControlPaint.DrawFocusRectangle(e.Graphics, new Rectangle(0, 0, Width - 1, Height - 1));
@@ -843,7 +866,7 @@ namespace Autoclicker
 
     internal sealed class StyledPanel : Panel
     {
-        internal Color LineColor = Color.FromArgb(31, 35, 39);
+        internal Color LineColor = AppColors.Border;
         internal StyledPanel() { DoubleBuffered = true; }
         protected override void OnPaint(PaintEventArgs e)
         {

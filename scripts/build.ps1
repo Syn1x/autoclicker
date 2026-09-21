@@ -1,5 +1,5 @@
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.0.1',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.0.2',
     [string]$BuildRoot = (Join-Path $PSScriptRoot '..\artifacts'),
     [switch]$Package,
     [string]$SigningParameters = $env:AUTOCLICKER_SIGN_PARAMS
