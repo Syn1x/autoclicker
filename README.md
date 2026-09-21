@@ -38,8 +38,8 @@ The script restores locked dependencies, builds, runs non-clicking tests, and op
 
 ## Publish an update
 
-1. Commit and push the changes to `main`.
-2. Edit `RELEASE-NOTES.md` for the new release.
+1. Edit `RELEASE-NOTES.md` to describe the new release.
+2. Commit and push the code and release notes to `main`.
 3. In **Actions → Publish release → Run workflow**, enter a new version such as `1.0.1`.
 4. The workflow tests, packages and publishes the installer and update feed. Existing users receive it on their next update check.
 
