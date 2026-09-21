@@ -1,5 +1,5 @@
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.4.0',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.5.0',
     [string]$BuildRoot = (Join-Path $PSScriptRoot '..\artifacts'),
     [switch]$Package
 )

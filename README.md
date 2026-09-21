@@ -18,14 +18,14 @@ There is no installer, ZIP to extract, application folder, shortcut creation, or
 - The default click interval is 50 ms, with optional ±10% timing variation.
 - Rising and falling sounds indicate start and stop.
 - Moving over this app's window or closing it stops clicking. Closing exits the application.
-- Toggle **Crosshair** in the top bar to show an independent center-screen overlay. **Customize** opens its appearance controls.
+- Use the **Clicker** and **Crosshair** tabs in the same compact window. Open **Crosshair** and check **Show crosshair** for the independent center-screen overlay.
 - Number fields and dropdown text are centered. Typed numbers apply when you click elsewhere, leave the field, switch windows, or close settings; Enter also works.
 
 The selected key is saved in `%LOCALAPPDATA%\Autoclicker\Autoclicker.settings`, outside the EXE, so it survives updates and does not travel with the file you share. The previous edition's key is imported if available. Other click/timer options reset to their defaults each launch. This sends ordinary Windows left mouse input; it does not detect team slots or game state.
 
 ## Crosshair
 
-Choose **Dot**, **Cross**, **Open cross**, **Circle**, or **Circle + dot**. Adjust **Size** with its slider or centered number field (2–32 px). **Thickness** has its own slider and number field (0.5–8 px) for cross lines and circle outlines; a solid dot uses Size only. Both controls update the preview and overlay immediately and stay synchronized. Typed numbers apply when you click away. Existing appearance settings keep their original 1.5 px thickness when updating.
+In the **Crosshair** tab, choose **Dot**, **Cross**, **Open cross**, **Circle**, or **Circle + dot**. Adjust **Size** with its slider or centered number field (2–32 px). **Thickness** has its own slider and number field (0.5–8 px) for cross lines and circle outlines; a solid dot uses Size only. Both controls update the preview and overlay immediately and stay synchronized. Typed numbers apply when you click away or switch tabs. Existing appearance settings keep their original 1.5 px thickness when updating.
 
 Move the rainbow color slider or select **White**. The optional dark outline helps the crosshair stay visible on bright scenes. The display selector centers it on your chosen monitor; it uses the full screen, not the area above the taskbar.
 
@@ -53,7 +53,7 @@ Install the .NET 9 SDK (or a compatible newer SDK) and use PowerShell on Windows
 
 ```powershell
 ./scripts/build.ps1
-./scripts/build.ps1 -Version 1.4.0 -Package
+./scripts/build.ps1 -Version 1.5.0 -Package
 ```
 
 The script restores locked build dependencies, builds, runs non-clicking tests, and optionally creates `autoclicker.exe`, `autoclicker-update.json`, and `SHA256SUMS.txt`. Build files go into `artifacts/`, or a directory supplied with `-BuildRoot`. The distributed EXE has only Windows/.NET Framework dependencies and embeds its icon; it requires no adjacent DLL or configuration file.
@@ -64,7 +64,7 @@ Tests exercise an EXE-only launch, the real updater helper and parent-exit wait,
 
 1. Edit `RELEASE-NOTES.md` to describe the new release.
 2. Commit and push the code and release notes to `main`.
-3. In **Actions → Publish release → Run workflow**, enter a newer version such as `1.4.1`.
+3. In **Actions → Publish release → Run workflow**, enter a newer version such as `1.5.1`.
 4. The workflow tests and publishes the standalone EXE and its update manifest. Users receive it on their next update check.
 
 The workflow uses GitHub's temporary repository token. The EXE contains no GitHub credentials. Update URLs are restricted to this repository; the manifest cannot redirect the app to an arbitrary download host. Public HTTPS release assets and their checksum manifest are the update trust source. A publisher signing certificate has not been configured.

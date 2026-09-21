@@ -192,7 +192,7 @@ namespace Autoclicker
         }
     }
 
-    internal sealed class ClickerForm : Form
+    internal sealed partial class ClickerForm : Form
     {
         private const int ToggleId = 1;
         private const int BindingId = 2;
@@ -222,7 +222,6 @@ namespace Autoclicker
         private Button changeKey;
         private Button resetKey;
         private Label bindingValue;
-        private Label shortcutFooter;
         private CheckBox autoStop;
         private NumericUpDown stopMinutes;
         private NumericUpDown stopSeconds;
@@ -232,7 +231,7 @@ namespace Autoclicker
         private UpdateCoordinator updates;
         private readonly CrosshairController crosshair;
         private CheckBox crosshairToggle;
-        private CrosshairSettingsForm crosshairSettings;
+        private CrosshairSettingsControl crosshairSettings;
 
         private string KeyName { get { return KeyBindings.DisplayName(toggleKey); } }
         private string StoppedMessage { get { return "Stopped. " + KeyName + " starts again."; } }
@@ -252,187 +251,7 @@ namespace Autoclicker
                 applicationIcon = new Icon(iconStream);
                 Icon = applicationIcon;
             }
-            ClientSize = new Size(620, 798);
-            StartPosition = FormStartPosition.CenterScreen;
-            FormBorderStyle = FormBorderStyle.None;
-            MaximizeBox = false;
-            BackColor = AppColors.Background;
-            ForeColor = AppColors.Text;
-            Font = new Font("Segoe UI", 9F);
-            DoubleBuffered = true;
-
-            Panel topbar = new Panel();
-            topbar.SetBounds(1, 3, 618, 71);
-            topbar.BackColor = AppColors.Header;
-            Controls.Add(topbar);
-            Label title = AddLabel(topbar, "Autoclicker", 18, 21, 485, 34, 18F, ForeColor, false);
-            AttachWindowDrag(topbar);
-            AttachWindowDrag(title);
-            Button minimize = MakeButton("-", 532, 22, 28, topbar.BackColor, soft);
-            minimize.Parent = topbar;
-            minimize.Height = 28;
-            minimize.AccessibleName = "Minimize";
-            minimize.Click += delegate { WindowState = FormWindowState.Minimized; };
-            Button close = MakeButton("X", 572, 22, 28, topbar.BackColor, soft);
-            close.Parent = topbar;
-            close.Height = 28;
-            close.AccessibleName = "Close Autoclicker";
-            close.Click += delegate { Close(); };
-
-            StyledPanel toolbar = MakePanel(this, 1, 74, 618, 39, AppColors.Header);
-            AddLabel(toolbar, "MOUSE CONTROL", 18, 12, 150, 18, 8F, soft, true);
-            crosshairToggle = new LargeCheckBox();
-            crosshairToggle.SetBounds(176, 4, 137, 30);
-            crosshairToggle.Text = "Crosshair";
-            crosshairToggle.ForeColor = soft;
-            crosshairToggle.AccessibleName = "Show crosshair overlay";
-            toolbar.Controls.Add(crosshairToggle);
-            crosshairToggle.CheckedChanged += delegate
-            {
-                if (crosshairToggle.Checked == crosshair.Enabled) return;
-                try { crosshair.SetEnabled(crosshairToggle.Checked); }
-                catch (System.ComponentModel.Win32Exception)
-                {
-                    crosshairToggle.Checked = false;
-                    detail.Text = "Windows could not display the crosshair. Try again.";
-                }
-            };
-            crosshair.Changed += delegate { crosshairToggle.Checked = crosshair.Enabled; };
-            Button customize = MakeButton("Customize", 316, 7, 112, AppColors.Button, soft);
-            customize.Parent = toolbar;
-            customize.Height = 25;
-            customize.AccessibleName = "Customize crosshair";
-            customize.Click += delegate
-            {
-                if (choosingKey) CancelKeyCapture();
-                StopClicking(StoppedMessage);
-                if (crosshairSettings == null || crosshairSettings.IsDisposed)
-                    crosshairSettings = new CrosshairSettingsForm(crosshair);
-                crosshairSettings.Show(this);
-                crosshairSettings.Activate();
-            };
-            status = AddLabel(toolbar, "STOPPED", 456, 8, 140, 23, 8F, muted, true);
-            status.TextAlign = ContentAlignment.MiddleCenter;
-            status.BackColor = AppColors.Button;
-            AddLabel(this, "CURRENT SESSION", 20, 133, 300, 18, 7.5F, muted, true);
-            Label module = AddLabel(this, "INPUT / 01", 460, 132, 140, 20, 8F, muted, false);
-            module.Font = new Font("Consolas", 8F);
-            module.TextAlign = ContentAlignment.MiddleRight;
-
-            StyledPanel telemetry = MakePanel(this, 20, 157, 580, 92, AppColors.Inset);
-            AddDivider(telemetry, 193, 0, 1, 92);
-            AddDivider(telemetry, 386, 0, 1, 92);
-            AddLabel(telemetry, "TARGET RATE", 14, 13, 163, 18, 7.5F, muted, true);
-            rate = AddLabel(telemetry, "", 12, 40, 165, 38, 22F, ForeColor, false);
-            rate.Font = new Font("Consolas", 22F);
-            AddLabel(telemetry, "SESSION CLICKS", 207, 13, 163, 18, 7.5F, muted, true);
-            counter = AddLabel(telemetry, "0", 205, 40, 165, 38, 22F, ForeColor, false);
-            counter.Font = new Font("Consolas", 22F);
-            AddLabel(telemetry, "CLICK MODE", 400, 13, 163, 18, 7.5F, muted, true);
-            AddLabel(telemetry, "Left button", 398, 42, 162, 25, 13F, soft, false);
-            AddLabel(telemetry, "AT CURSOR", 400, 69, 163, 15, 7F, muted, false);
-
-            AddLabel(this, "CLICK SETTINGS", 20, 271, 300, 18, 7.5F, muted, true);
-            StyledPanel speedPanel = MakePanel(this, 20, 294, 282, 129, AppColors.Surface);
-            StyledPanel variationPanel = MakePanel(this, 314, 294, 286, 129, AppColors.Surface);
-            AddLabel(speedPanel, "Click interval", 14, 13, 220, 22, 9F, soft, false);
-            interval = new NumericInput();
-            interval.SetBounds(16, 47, 137, 35);
-            interval.Minimum = 20;
-            interval.Maximum = 2000;
-            interval.Increment = 10;
-            interval.Value = 50;
-            interval.Font = new Font("Consolas", 19F);
-            interval.BackColor = AppColors.Background;
-            interval.ForeColor = ForeColor;
-            interval.BorderStyle = BorderStyle.FixedSingle;
-            interval.AccessibleName = "Click interval in milliseconds";
-            interval.ValueChanged += delegate { UpdateRate(); };
-            speedPanel.Controls.Add(interval);
-            AddLabel(speedPanel, "ms", 166, 58, 55, 25, 10F, muted, false);
-            AddLabel(speedPanel, "Lower interval = faster clicks", 14, 99, 260, 18, 8F, muted, false);
-
-            variation = new LargeCheckBox();
-            variation.SetBounds(14, 8, 257, 30);
-            variation.Text = "Timing variation";
-            variation.Checked = true;
-            variation.ForeColor = soft;
-            variation.CheckedChanged += delegate { UpdateRate(); };
-            variationPanel.Controls.Add(variation);
-            AddLabel(variationPanel, "+/- 10%", 12, 47, 250, 37, 20F, soft, false).Font = new Font("Consolas", 20F);
-            timingHint = AddLabel(variationPanel, "", 14, 99, 260, 18, 8F, muted, false);
-            UpdateRate();
-
-            StyledPanel keyPanel = MakePanel(this, 20, 436, 580, 61, AppColors.Surface);
-            AddLabel(keyPanel, "START / STOP KEY", 14, 9, 300, 17, 7.5F, muted, true);
-            bindingValue = AddLabel(keyPanel, KeyName, 12, 29, 305, 26, 12F, soft, true);
-            changeKey = MakeButton("Change key", 352, 13, 114, AppColors.Button, soft);
-            changeKey.Parent = keyPanel;
-            changeKey.Height = 35;
-            changeKey.AccessibleName = "Change start and stop key";
-            changeKey.Click += delegate { if (choosingKey) CancelKeyCapture(); else BeginKeyCapture(); };
-            resetKey = MakeButton("Reset F11", 476, 13, 90, AppColors.Surface, muted);
-            resetKey.Parent = keyPanel;
-            resetKey.Height = 35;
-            resetKey.Click += delegate
-            {
-                if (choosingKey) CancelKeyCapture();
-                StopClicking(StoppedMessage);
-                ApplyBinding((int)Keys.F11);
-            };
-
-            StyledPanel autoStopPanel = MakePanel(this, 20, 510, 580, 82, AppColors.Surface);
-            autoStop = new LargeCheckBox();
-            autoStop.SetBounds(14, 10, 185, 30);
-            autoStop.Text = "Stop after";
-            autoStop.Checked = true;
-            autoStop.AccessibleName = "Enable automatic stop";
-            autoStop.ForeColor = soft;
-            autoStopPanel.Controls.Add(autoStop);
-            stopMinutes = MakeDurationInput(autoStopPanel, 220, 999, 1, "Automatic stop minutes");
-            AddLabel(autoStopPanel, "min", 305, 20, 52, 24, 9F, muted, false);
-            stopSeconds = MakeDurationInput(autoStopPanel, 370, 59, 0, "Automatic stop seconds");
-            AddLabel(autoStopPanel, "sec", 455, 20, 52, 24, 9F, muted, false);
-            autoStopHint = AddLabel(autoStopPanel, "", 14, 54, 552, 19, 8F, muted, false);
-            autoStop.CheckedChanged += delegate { UpdateAutoStopControls(); UpdateAutoStopHint(clock.ElapsedMilliseconds); };
-            stopMinutes.ValueChanged += delegate { UpdateAutoStopHint(clock.ElapsedMilliseconds); };
-            stopSeconds.ValueChanged += delegate { UpdateAutoStopHint(clock.ElapsedMilliseconds); };
-            UpdateAutoStopControls();
-            UpdateAutoStopHint(clock.ElapsedMilliseconds);
-
-            StyledPanel messagePanel = MakePanel(this, 20, 605, 580, 43, AppColors.Raised);
-            messagePanel.LineColor = AppColors.Border;
-            detail = AddLabel(messagePanel, "Hover over the team button, then press " + KeyName + " to start.",
-                12, 10, 554, 29, 9F, AppColors.SecondaryText, false);
-            startHint = AddLabel(this, "Press " + KeyName + " to start", 20, 660, 366, 43,
-                9F, AppColors.SecondaryText, true);
-            startHint.BackColor = AppColors.Raised;
-            startHint.TextAlign = ContentAlignment.MiddleCenter;
-            startHint.AccessibleRole = AccessibleRole.StaticText;
-            startHint.TabStop = false;
-            stop = MakeButton("STOP", 400, 660, 200, AppColors.DangerBackground, AppColors.Danger);
-            stop.FlatAppearance.BorderColor = AppColors.DangerBorder;
-            stop.Click += delegate { if (choosingKey) CancelKeyCapture(); else StopClicking(StoppedMessage); };
-            AddDivider(this, 1, 718, 618, 1);
-            shortcutFooter = AddLabel(this, KeyName + "   Toggle on / off", 20, 732, 430, 18, 8F, muted, false);
-            Label version = AddLabel(this, "v" + AppInfo.Version, 470, 732, 130, 18, 8F, muted, false);
-            version.TextAlign = ContentAlignment.MiddleRight;
-            updateStatus = AddLabel(this, "Updates check automatically on launch", 20, 768, 435, 18, 8F, muted, false);
-            checkUpdates = MakeButton("Check for updates", 466, 758, 134, AppColors.Button, soft);
-            checkUpdates.Height = 29;
-            checkUpdates.Enabled = false;
-            checkUpdates.Click += async delegate
-            {
-                if (updates == null) return;
-                if (updates.CanRestart)
-                {
-                    if (choosingKey) CancelKeyCapture();
-                    StopClicking("Restarting to apply the update...");
-                    if (updates.RestartToApply()) Close();
-                }
-                else if (updates.CanConfirm) await updates.ConfirmAsync();
-                else await updates.CheckAsync();
-            };
+            BuildInterface();
 
             timer.Interval = 15;
             timer.Tick += OnTick;
@@ -475,7 +294,7 @@ namespace Autoclicker
             resetKey.Enabled = false;
             changeKey.Text = "Cancel";
             bindingValue.Text = "Press and release a key...";
-            status.Text = "BINDING";
+            status.Text = "Choose a key";
             status.ForeColor = AppColors.Warning;
             detail.Text = "Press and release your new key. Click Cancel to keep " + KeyName + ".";
         }
@@ -496,7 +315,7 @@ namespace Autoclicker
         {
             choosingKey = false;
             UpdateAutoStopControls();
-            changeKey.Text = "Change key";
+            changeKey.Text = "Change";
             resetKey.Enabled = true;
             interval.Enabled = true;
             variation.Enabled = true;
@@ -509,7 +328,6 @@ namespace Autoclicker
             toggleKey = key;
             if (hotkeys != null) hotkeys.Bindings.SetToggleKey(key);
             EndKeyCapture();
-            shortcutFooter.Text = KeyName + "   Toggle on / off";
             bool saved = KeySettings.TrySave(settingsPath, key);
             StopClicking(saved ? KeyName + " is saved. Press it to start / stop."
                 : KeyName + " is set for this session. Settings could not be saved.");
@@ -530,7 +348,7 @@ namespace Autoclicker
             input.SetBounds(x, 13, 78, 31);
             input.Maximum = maximum;
             input.Value = value;
-            input.Font = new Font("Consolas", 14F);
+            input.Font = new Font("Segoe UI", 10F);
             input.BackColor = AppColors.Background;
             input.ForeColor = ForeColor;
             input.BorderStyle = BorderStyle.FixedSingle;
@@ -561,13 +379,13 @@ namespace Autoclicker
         {
             string text;
             if (engine.Active && engine.StopsAt != 0)
-                text = "TIME LEFT  /  " + FormatDuration(engine.StopsAt - now);
+                text = "Remaining " + FormatDuration(engine.StopsAt - now);
             else if (!autoStop.Checked)
-                text = "OFF / runs until stopped";
+                text = "Runs until stopped";
             else if (DurationMilliseconds == 0)
                 text = "Enter at least 1 second";
             else
-                text = "READY / " + FormatDuration(DurationMilliseconds) + " per run";
+                text = "Stops after " + FormatDuration(DurationMilliseconds);
             if (autoStopHint.Text != text) autoStopHint.Text = text;
         }
 
@@ -636,8 +454,8 @@ namespace Autoclicker
                 int baseInterval = (int)interval.Value;
                 int spread = baseInterval / 10;
                 timingHint.Text = variation.Checked
-                    ? (baseInterval - spread) + "-" + (baseInterval + spread) + " ms target window"
-                    : "OFF / steady " + baseInterval + " ms";
+                    ? (baseInterval - spread) + "-" + (baseInterval + spread) + " ms"
+                    : "Steady " + baseInterval + " ms";
             }
         }
 
@@ -650,7 +468,7 @@ namespace Autoclicker
             if (!hotkeys.Active)
             {
                 startHint.Text = "Shortcut unavailable";
-                status.Text = "KEY ERROR";
+                status.Text = "Key unavailable";
                 status.ForeColor = AppColors.Warning;
                 detail.Text = "Windows could not enable the shortcut. Reopen Autoclicker to retry.";
             }
@@ -699,8 +517,8 @@ namespace Autoclicker
             startHint.Text = "Press " + KeyName + " to stop";
             status.ForeColor = accent;
             status.BackColor = AppColors.Selection;
-            status.Text = "CLICKING";
-            detail.Text = "Clicking at your cursor. Press " + KeyName + " again to stop.";
+            status.Text = "Clicking";
+            detail.Text = "Left clicks at your cursor.";
             counter.Text = "0";
             timer.Start();
             if (sounds != null) sounds.Play(true);
@@ -721,7 +539,7 @@ namespace Autoclicker
             variation.Enabled = true;
             startHint.Text = "Press " + KeyName + " to start";
             if (enableHotkeys && (hotkeys == null || !hotkeys.Active)) return;
-            status.Text = "STOPPED";
+            status.Text = "Stopped";
             status.ForeColor = muted;
             status.BackColor = AppColors.Button;
             detail.Text = reason;
@@ -748,8 +566,8 @@ namespace Autoclicker
                 return;
             }
             UpdateAutoStopHint(now);
-            status.Text = "CLICKING";
-            detail.Text = "Clicking at your cursor. Press " + KeyName + " again to stop.";
+            status.Text = "Clicking";
+            detail.Text = "Left clicks at your cursor.";
             counter.Text = engine.Count.ToString("N0");
             Text = "Autoclicker - Clicking (" + KeyName + " toggles off)";
         }

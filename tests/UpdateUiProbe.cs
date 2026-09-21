@@ -24,7 +24,7 @@ namespace Autoclicker
 
         internal static void Run(string root)
         {
-            var backend = new IntegrationMain.FakeBackend { Version = "1.4.1" };
+            var backend = new IntegrationMain.FakeBackend { Version = "1.5.1" };
             using (var updates = new UpdateCoordinator(backend))
             using (var form = new ClickerForm(false))
             {

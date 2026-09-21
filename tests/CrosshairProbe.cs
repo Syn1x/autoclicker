@@ -115,25 +115,24 @@ namespace Autoclicker
                 Application.DoEvents();
                 Check(controller.Enabled, "Minimizing the main window must preserve the overlay.");
                 form.WindowState = FormWindowState.Normal;
-                using (var dialog = new CrosshairSettingsForm(controller))
                 {
-                    dialog.Opacity = 0;
-                    dialog.Show(form);
+                    var dialog = (CrosshairSettingsControl)typeof(ClickerForm).GetField("crosshairSettings", Fields).GetValue(form);
+                    ((Button)typeof(ClickerForm).GetField("crosshairTab", Fields).GetValue(form)).PerformClick();
                     Application.DoEvents();
-                    using (var image = new Bitmap(dialog.Width, dialog.Height))
+                    using (var image = new Bitmap(form.Width, form.Height))
                     {
-                        dialog.DrawToBitmap(image, new Rectangle(Point.Empty, dialog.Size));
+                        form.DrawToBitmap(image, new Rectangle(Point.Empty, form.Size));
                         image.Save(Path.Combine(root, "crosshair-settings.png"), ImageFormat.Png);
                     }
-                    TrackBar hue = null;
-                    TrackBar sizeSlider = null, thicknessSlider = null;
+                    SlimSlider hue = null;
+                    SlimSlider sizeSlider = null, thicknessSlider = null;
                     NumericUpDown size = null, thickness = null;
                     ComboBox style = null;
                     foreach (Control control in dialog.Controls)
                     {
-                        if (control.AccessibleName == "Crosshair color hue") hue = (TrackBar)control;
-                        if (control.AccessibleName == "Crosshair size slider") sizeSlider = (TrackBar)control;
-                        if (control.AccessibleName == "Crosshair thickness slider") thicknessSlider = (TrackBar)control;
+                        if (control.AccessibleName == "Crosshair color hue") hue = (SlimSlider)control;
+                        if (control.AccessibleName == "Crosshair size slider") sizeSlider = (SlimSlider)control;
+                        if (control.AccessibleName == "Crosshair thickness slider") thicknessSlider = (SlimSlider)control;
                         if (control.AccessibleName == "Crosshair size in pixels") size = (NumericUpDown)control;
                         if (control.AccessibleName == "Crosshair thickness in pixels") thickness = (NumericUpDown)control;
                         if (control.AccessibleName == "Crosshair style") style = (ComboBox)control;
@@ -158,14 +157,14 @@ namespace Autoclicker
                     Check(thickness.Enabled && thickness.Value == 2.5M, "Line styles must restore the chosen thickness.");
                     sizeSlider.Value = 32;
                     thicknessSlider.Value = 80;
-                    using (var image = new Bitmap(dialog.Width, dialog.Height))
+                    using (var image = new Bitmap(form.Width, form.Height))
                     {
-                        dialog.DrawToBitmap(image, new Rectangle(Point.Empty, dialog.Size));
+                        form.DrawToBitmap(image, new Rectangle(Point.Empty, form.Size));
                         image.Save(Path.Combine(root, "crosshair-thickness.png"), ImageFormat.Png);
                     }
                     controller.SetEnabled(false);
                     Check(!toggle.Checked, "Main toggle must stay in sync with settings.");
-                    dialog.Close();
+                    ((Button)typeof(ClickerForm).GetField("clickerTab", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(form)).PerformClick();
                 }
                 toggle.Checked = true;
                 form.Close();

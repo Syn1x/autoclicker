@@ -44,7 +44,6 @@ namespace Autoclicker
                     Label startHint = Field<Label>(form, "startHint");
                     Button stop = Field<Button>(form, "stop");
                     Label value = Field<Label>(form, "bindingValue");
-                    Label footer = Field<Label>(form, "shortcutFooter");
                     Check(!startHint.TabStop && !startHint.CanSelect && startHint.AccessibleRole == AccessibleRole.StaticText,
                         "The start area must be a non-focusable label.");
                     typeof(Control).GetMethod("OnClick", Flags).Invoke(startHint, new object[] { EventArgs.Empty });
@@ -57,7 +56,7 @@ namespace Autoclicker
                     hook.DispatchKey((int)Keys.F9, false);
                     Application.DoEvents();
                     Check(!fake.Active && !timer.Enabled, "Finishing capture must leave clicking stopped.");
-                    Check(value.Text == "F9" && footer.Text.Contains("F9") && startHint.Text == "Press F9 to start", "All shortcut labels must update.");
+                    Check(value.Text == "F9" && startHint.Text == "Press F9 to start", "All shortcut labels must update.");
                     Check(KeySettings.Load(settings) == (int)Keys.F9, "The chosen key must persist.");
                     Check(!hook.DispatchKey((int)Keys.F11, true), "Old F11 must pass through.");
                     hook.DispatchKey((int)Keys.F11, false);
@@ -109,16 +108,16 @@ namespace Autoclicker
                         "A zero duration must not silently start unlimited clicking.");
                     minutes.Value = 2;
                     seconds.Value = 30;
-                    Check(timerHint.Text == "READY / 02:30 per run", "Entered duration must show correctly.");
+                    Check(timerHint.Text == "Stops after 02:30", "Entered duration must show correctly.");
                     hook.DispatchKey((int)Keys.F11, true);
                     hook.DispatchKey((int)Keys.F11, false);
                     Application.DoEvents();
                     Check(fake.Active && fake.StopsAt - fake.StartsAt == 150000 &&
                         !autoStop.Enabled && !minutes.Enabled && !seconds.Enabled,
                         "Starting must arm the chosen duration and lock its settings.");
-                    Check(timerHint.Text == "TIME LEFT  /  02:30", "The countdown must start immediately.");
+                    Check(timerHint.Text == "Remaining 02:30", "The countdown must start immediately.");
                     typeof(ClickerForm).GetMethod("UpdateAutoStopHint", Flags).Invoke(form, new object[] { fake.StopsAt - 1 });
-                    Check(timerHint.Text == "TIME LEFT  /  00:01", "Countdown must round remaining fractions up.");
+                    Check(timerHint.Text == "Remaining 00:01", "Countdown must round remaining fractions up.");
                     fake.Tick(fake.StopsAt, false);
                     typeof(ClickerForm).GetMethod("OnTick", Flags).Invoke(form, new object[] { null, EventArgs.Empty });
                     Check(!fake.Active && !timer.Enabled && autoStop.Enabled && minutes.Enabled &&

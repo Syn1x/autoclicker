@@ -44,6 +44,7 @@ namespace Autoclicker
                 CrosshairProbe.Run(root);
                 InputCommitProbe.Run(root);
                 UpdateUiProbe.Run(root);
+                CompactLayoutProbe.Run(root);
                 Console.WriteLine("PASS: standalone EXE, real self-update helper, update validation/cancellation, engine, keyboard, timer, settings, close, checkbox repaint, crosshair styles/color/click-through/focus/lifecycle. No real input sent.");
                 return 0;
             }

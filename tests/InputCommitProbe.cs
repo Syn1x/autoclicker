@@ -49,7 +49,7 @@ namespace Autoclicker
                 TypeText(minutes, "2");
                 TypeText(seconds, "15");
                 Click(detail.Parent);
-                Check(duration.Text == "READY / 02:15 per run", "Clicking empty panel space must apply typed duration values.");
+                Check(duration.Text == "Stops after 02:15", "Clicking empty panel space must apply typed duration values.");
 
                 form.ActiveControl = interval;
                 TypeText(interval, "200");
@@ -63,21 +63,20 @@ namespace Autoclicker
                 Check(interval.Text == "2000", "An empty input must restore its last valid value.");
 
                 var controller = Field<CrosshairController>(form, "crosshair");
-                using (var dialog = new CrosshairSettingsForm(controller))
                 {
-                    dialog.Opacity = 0;
-                    dialog.Show(form);
+                    var dialog = Field<CrosshairSettingsControl>(form, "crosshairSettings");
+                    Field<Button>(form, "crosshairTab").PerformClick();
                     NumericUpDown size = null;
                     NumericUpDown thickness = null;
-                    TrackBar sizeSlider = null, thicknessSlider = null;
+                    SlimSlider sizeSlider = null, thicknessSlider = null;
                     ComboBox style = null;
                     Control preview = null;
                     foreach (Control control in dialog.Controls)
                     {
                         if (control.AccessibleName == "Crosshair size in pixels") size = (NumericUpDown)control;
                         if (control.AccessibleName == "Crosshair thickness in pixels") thickness = (NumericUpDown)control;
-                        if (control.AccessibleName == "Crosshair size slider") sizeSlider = (TrackBar)control;
-                        if (control.AccessibleName == "Crosshair thickness slider") thicknessSlider = (TrackBar)control;
+                        if (control.AccessibleName == "Crosshair size slider") sizeSlider = (SlimSlider)control;
+                        if (control.AccessibleName == "Crosshair thickness slider") thicknessSlider = (SlimSlider)control;
                         if (control.AccessibleName == "Crosshair style") style = (ComboBox)control;
                         if (control is CrosshairPreview) preview = control;
                     }
@@ -89,7 +88,7 @@ namespace Autoclicker
                     Click(preview);
                     Check(controller.Options.Size == 12 && sizeSlider.Value == 12, "Clicking the preview must update the size and slider without Enter.");
                     TypeText(size, "18");
-                    typeof(Form).GetMethod("OnDeactivate", Private).Invoke(dialog, new object[] { EventArgs.Empty });
+                    typeof(Form).GetMethod("OnDeactivate", Private).Invoke(form, new object[] { EventArgs.Empty });
                     Check(controller.Options.Size == 18, "Clicking away to another window must apply the size.");
                     TypeText(size, "999");
                     Click(preview);
@@ -107,7 +106,7 @@ namespace Autoclicker
                     Check(controller.Options.Thickness == 8M && thicknessSlider.Value == 80, "Typed thickness must respect its maximum.");
                     TypeText(thickness, (2.5M).ToString());
                     TypeText(size, "14");
-                    dialog.Close();
+                    ((Button)typeof(ClickerForm).GetField("clickerTab", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(form)).PerformClick();
                     Check(controller.Options.Size == 14, "Closing the settings window must commit pending text before saving.");
                 }
                 using (var reopened = new CrosshairController(settings))
