@@ -1,13 +1,8 @@
-Autoclicker 1.2.0 adds a customizable crosshair overlay to the single portable EXE.
+Autoclicker 1.2.1 improves input fields.
 
-- Toggle **Crosshair** in the top bar; select **Customize** for its controls.
-- Choose a dot, cross, open cross, circle, or circle with a dot.
-- Pick a color with the rainbow slider, adjust the size, and optionally add a dark outline.
-- Select the monitor to use. The overlay is centered on that screen and allows mouse input to pass through.
-- Runs independently of clicking, stays visible when the app is minimized, and closes completely with the app.
-- Remembers your appearance preferences; the overlay starts off each launch.
-- Uses no continuous redraw loop and adds no external DLLs or installation step.
+- Centers the text in the click interval, timer, crosshair size, and dropdown fields.
+- Applies typed numbers when you click elsewhere, including labels, the preview, and empty panel space.
+- Also applies pending values when switching windows or closing crosshair settings, without needing Enter.
+- Preserves number limits and restores the last valid value if an input is empty or invalid.
 
-Use windowed or borderless games; exclusive fullscreen may hide desktop overlays.
-
-**Existing 1.1.0 users:** check for updates, wait for “v1.2.0 ready / applies on close,” then close and reopen Autoclicker. Or download **autoclicker.exe** directly. It is still the complete app and the only file you need to share.
+Check for updates, wait for “v1.2.1 ready / applies on close,” then close and reopen Autoclicker. Or download **autoclicker.exe** directly. It is still one portable, self-updating EXE.

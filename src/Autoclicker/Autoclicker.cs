@@ -336,7 +336,7 @@ namespace Autoclicker
             StyledPanel speedPanel = MakePanel(this, 20, 294, 282, 129, AppColors.Surface);
             StyledPanel variationPanel = MakePanel(this, 314, 294, 286, 129, AppColors.Surface);
             AddLabel(speedPanel, "Click interval", 14, 13, 220, 22, 9F, soft, false);
-            interval = new NumericUpDown();
+            interval = new NumericInput();
             interval.SetBounds(16, 47, 137, 35);
             interval.Minimum = 20;
             interval.Maximum = 2000;
@@ -431,6 +431,7 @@ namespace Autoclicker
             AutoScaleMode = AutoScaleMode.Dpi;
             ResumeLayout(false);
             if (enableHotkeys) sounds = new ToggleSounds();
+            InputCommit.Attach(this);
         }
 
         internal void AttachUpdates(UpdateCoordinator coordinator)
@@ -513,7 +514,7 @@ namespace Autoclicker
 
         private NumericUpDown MakeDurationInput(Control parent, int x, int maximum, int value, string name)
         {
-            NumericUpDown input = new NumericUpDown();
+            NumericUpDown input = new NumericInput();
             input.SetBounds(x, 13, 78, 31);
             input.Maximum = maximum;
             input.Value = value;

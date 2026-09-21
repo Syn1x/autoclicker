@@ -285,7 +285,7 @@ namespace Autoclicker
                 e.Graphics.FillRectangle(background, e.Bounds);
             if (e.Index >= 0)
                 TextRenderer.DrawText(e.Graphics, GetItemText(Items[e.Index]), Font, e.Bounds, ForeColor,
-                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
             e.DrawFocusRectangle();
         }
     }
@@ -337,7 +337,7 @@ namespace Autoclicker
             preview.SetBounds(272, 111, 148, 108);
             Controls.Add(preview);
             Label("SIZE", 20, 173, 60, 20, 8F);
-            var size = new NumericUpDown { Minimum = 2, Maximum = 32, Value = controller.Options.Size,
+            var size = new NumericInput { Minimum = 2, Maximum = 32, Value = controller.Options.Size,
                 BackColor = AppColors.Inset, ForeColor = ForeColor, BorderStyle = BorderStyle.FixedSingle };
             size.SetBounds(80, 172, 74, 28);
             size.AccessibleName = "Crosshair size in pixels";
@@ -395,6 +395,7 @@ namespace Autoclicker
             AutoScaleDimensions = new SizeF(96, 96);
             AutoScaleMode = AutoScaleMode.Dpi;
             ResumeLayout(false);
+            InputCommit.Attach(this);
         }
 
         private void SyncEnabled(object sender, EventArgs e) { enabled.Checked = controller.Enabled; }
@@ -431,7 +432,12 @@ namespace Autoclicker
         { base.OnPaint(e); using (var pen = new Pen(AppColors.ControlBorder)) e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1); }
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { controller.Changed -= SyncEnabled; controller.Save(); }
+            if (disposing)
+            {
+                InputCommit.CommitOutside(this, null);
+                controller.Changed -= SyncEnabled;
+                controller.Save();
+            }
             base.Dispose(disposing);
         }
     }
