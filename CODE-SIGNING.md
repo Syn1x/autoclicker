@@ -2,7 +2,7 @@
 
 ## Current status
 
-Autoclicker is preparing an application for free code signing through SignPath Foundation. Approval has not been granted and signing is not active. Existing releases, including v1.5.0, are unsigned.
+Autoclicker's application for free code signing through SignPath Foundation was submitted on September 21, 2026, and is awaiting review. Approval has not been granted and signing is not active. Existing releases, including v1.5.0, are unsigned.
 
 If the application is approved, the signing service attribution will be: Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
 
