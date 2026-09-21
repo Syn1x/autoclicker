@@ -1,10 +1,9 @@
-Autoclicker 1.3.0 adds update confirmation and restart-to-update.
+Autoclicker 1.4.0 adds crosshair size and thickness sliders.
 
-- Detects updates on launch and shows **Confirm update** before downloading.
-- Keeps the app running while the confirmed download is verified.
-- Shows **Restart to update** when ready. Clicking it stops the autoclicker, applies the update, and automatically reopens the same EXE.
-- Keeps the app open if the update helper cannot start, so you can retry.
-- Closing without confirming does not download or apply anything. A normal close after a confirmed download applies it without reopening.
-- Preserves the single portable EXE, centered inputs, click-away editing, crosshair options, and saved preferences.
+- Adjust crosshair **Size** with a slider or number field, from 2–32 pixels.
+- Adjust **Thickness** with its own slider or number field, from 0.5–8 pixels, for cross lines and circle outlines. The solid dot uses Size only.
+- Sliders and number fields stay synchronized and update the preview and overlay immediately. Typed values apply when you click away.
+- Saves thickness alongside your existing appearance preferences, preserving older settings on upgrade.
+- Keeps small open-cross styles visible at the minimum size and retains the optional dark outline at every thickness.
 
-**To get this release from 1.1.x or 1.2.x:** check for updates, wait for the ready status, then close and reopen once. The confirmation and restart buttons are available for future updates from 1.3.0 onward. You can also download **autoclicker.exe** directly.
+From 1.3.0, choose **Check for updates → Confirm update → Restart to update**. Older versions apply on close and need to be reopened manually. You can also download **autoclicker.exe** directly; it is still one portable file.

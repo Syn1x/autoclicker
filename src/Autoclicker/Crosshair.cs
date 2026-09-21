@@ -17,11 +17,20 @@ namespace Autoclicker
     {
         [DataMember] internal CrosshairStyle Style = CrosshairStyle.Dot;
         [DataMember] internal int Size = 4;
+        [DataMember] internal decimal Thickness = 1.5M;
         [DataMember] internal int Hue = 120;
         [DataMember] internal bool White = true;
         [DataMember] internal bool Outline = true;
         [DataMember] internal string Display = "";
         internal Color Color { get { return White ? Color.White : HueColor(Hue); } }
+
+        [OnDeserializing]
+        private void SetMissingDefaults(StreamingContext context)
+        {
+            // Older settings have no thickness member. Keep their original
+            // 1.5 px stroke without resetting style, size, color or display.
+            Thickness = 1.5M;
+        }
 
         internal static Color HueColor(int hue)
         {
@@ -46,6 +55,8 @@ namespace Autoclicker
                     if (value == null || !Enum.IsDefined(typeof(CrosshairStyle), value.Style) ||
                         value.Size < 2 || value.Size > 32 || value.Hue < 0 || value.Hue > 359)
                         return new CrosshairOptions();
+                    if (value.Thickness < 0.5M || value.Thickness > 8M) value.Thickness = 1.5M;
+                    value.Thickness = Decimal.Round(value.Thickness, 1);
                     return value;
                 }
             }
@@ -91,14 +102,15 @@ namespace Autoclicker
                         path.AddEllipse(center.X - r, center.Y - r, r * 2, r * 2);
                     else
                     {
-                        float gap = options.Style == CrosshairStyle.OpenCross ? Math.Max(1F, r / 3) : 0;
+                        // Keep short arms visible at the size slider's minimum.
+                        float gap = options.Style == CrosshairStyle.OpenCross ? Math.Min(r / 2F, Math.Max(1F, r / 3)) : 0;
                         AddLine(path, center.X - r, center.Y, center.X - gap, center.Y);
                         AddLine(path, center.X + gap, center.Y, center.X + r, center.Y);
                         AddLine(path, center.X, center.Y - r, center.X, center.Y - gap);
                         AddLine(path, center.X, center.Y + gap, center.X, center.Y + r);
                     }
-                    using (var outline = new Pen(Color.FromArgb(220, 0, 0, 0), options.Style == CrosshairStyle.Dot ? 2F : 3.5F))
-                    using (var color = new Pen(options.Color, 1.5F))
+                    using (var outline = new Pen(Color.FromArgb(220, 0, 0, 0), options.Style == CrosshairStyle.Dot ? 2F : (float)options.Thickness + 2F))
+                    using (var color = new Pen(options.Color, (float)options.Thickness))
                     using (var fill = new SolidBrush(options.Color))
                     {
                         if (options.Outline) graphics.DrawPath(outline, path);
@@ -106,7 +118,9 @@ namespace Autoclicker
                         else graphics.DrawPath(color, path);
                         if (options.Style == CrosshairStyle.CircleDot)
                         {
-                            if (options.Outline) graphics.DrawEllipse(outline, center.X - 1, center.Y - 1, 2, 2);
+                            if (options.Outline)
+                                using (var dotOutline = new Pen(Color.FromArgb(220, 0, 0, 0), 3.5F))
+                                    graphics.DrawEllipse(dotOutline, center.X - 1, center.Y - 1, 2, 2);
                             graphics.FillEllipse(fill, center.X - 1, center.Y - 1, 2, 2);
                         }
                     }
@@ -302,7 +316,7 @@ namespace Autoclicker
             controller = value;
             SuspendLayout();
             Text = "Crosshair settings";
-            ClientSize = new Size(440, 458);
+            ClientSize = new Size(440, 534);
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterParent;
             ShowInTaskbar = false;
@@ -343,25 +357,57 @@ namespace Autoclicker
             size.AccessibleName = "Crosshair size in pixels";
             Controls.Add(size);
             Label("px", 166, 174, 50, 20, 9F);
+            var sizeSlider = Slider(12, 202, 245, 2, 32, controller.Options.Size, "Crosshair size slider");
+            Label("THICKNESS", 20, 249, 90, 20, 8F);
+            var thickness = new NumericInput { Minimum = 0.5M, Maximum = 8M, DecimalPlaces = 1, Increment = 0.5M,
+                Value = controller.Options.Thickness, BackColor = AppColors.Inset, ForeColor = ForeColor,
+                BorderStyle = BorderStyle.FixedSingle, AccessibleName = "Crosshair thickness in pixels" };
+            thickness.SetBounds(112, 247, 74, 28);
+            Controls.Add(thickness);
+            Label("px", 198, 249, 25, 20, 9F);
+            var thicknessSlider = Slider(220, 247, 208, 5, 80, (int)(controller.Options.Thickness * 10), "Crosshair thickness slider");
+            thicknessSlider.LargeChange = 5;
+            Label thicknessHint = Label("", 20, 282, 400, 20, 8F);
+            thicknessHint.ForeColor = AppColors.MutedText;
+            Action refreshThicknessControls = delegate
+            {
+                thickness.Enabled = thicknessSlider.Enabled = controller.Options.Style != CrosshairStyle.Dot;
+                thicknessHint.Text = thickness.Enabled ? "Line and ring width / 0.5 - 8 px" : "Dot diameter is controlled by Size.";
+            };
+            refreshThicknessControls();
             style.SelectedIndexChanged += delegate
             {
                 controller.Options.Style = (CrosshairStyle)style.SelectedIndex;
                 if (style.SelectedIndex != 0 && size.Value < 8) size.Value = 16;
+                refreshThicknessControls();
                 ApplyAppearance();
             };
-            size.ValueChanged += delegate { controller.Options.Size = (int)size.Value; ApplyAppearance(); };
+            size.ValueChanged += delegate
+            {
+                controller.Options.Size = (int)size.Value;
+                sizeSlider.Value = controller.Options.Size;
+                ApplyAppearance();
+            };
+            sizeSlider.ValueChanged += delegate { size.Value = sizeSlider.Value; };
+            thickness.ValueChanged += delegate
+            {
+                controller.Options.Thickness = thickness.Value;
+                thicknessSlider.Value = (int)(thickness.Value * 10);
+                ApplyAppearance();
+            };
+            thicknessSlider.ValueChanged += delegate { thickness.Value = thicknessSlider.Value / 10M; };
 
-            Label("COLOR", 20, 239, 100, 20, 8F);
-            colorValue = Label("", 296, 239, 124, 20, 9F);
+            Label("COLOR", 20, 315, 100, 20, 8F);
+            colorValue = Label("", 296, 315, 124, 20, 9F);
             colorValue.TextAlign = ContentAlignment.MiddleRight;
             var hue = new TrackBar { Minimum = 0, Maximum = 359, Value = controller.Options.Hue,
                 TickStyle = TickStyle.None, SmallChange = 1, LargeChange = 15, BackColor = BackColor };
-            hue.SetBounds(12, 271, 417, 30);
+            hue.SetBounds(12, 347, 417, 30);
             hue.AccessibleName = "Crosshair color hue";
             Controls.Add(hue);
-            var strip = new HueStrip(); strip.SetBounds(24, 267, 392, 6); Controls.Add(strip);
-            var white = Check("White", 20, 306, 145, controller.Options.White);
-            var outline = Check("Dark outline", 204, 306, 210, controller.Options.Outline);
+            var strip = new HueStrip(); strip.SetBounds(24, 343, 392, 6); Controls.Add(strip);
+            var white = Check("White", 20, 382, 145, controller.Options.White);
+            var outline = Check("Dark outline", 204, 382, 210, controller.Options.Outline);
             white.CheckedChanged += delegate { controller.Options.White = white.Checked; ApplyAppearance(); };
             outline.CheckedChanged += delegate { controller.Options.Outline = outline.Checked; ApplyAppearance(); };
             hue.ValueChanged += delegate
@@ -371,9 +417,9 @@ namespace Autoclicker
                 controller.Options.White = false;
                 ApplyAppearance();
             };
-            Label("DISPLAY", 20, 353, 75, 20, 8F);
+            Label("DISPLAY", 20, 429, 75, 20, 8F);
             var displays = new DarkComboBox { AccessibleName = "Crosshair display" };
-            displays.SetBounds(104, 349, 316, 28);
+            displays.SetBounds(104, 425, 316, 28);
             displays.Items.Add("Primary display");
             Screen[] screens = Screen.AllScreens;
             displays.SelectedIndex = 0;
@@ -389,7 +435,7 @@ namespace Autoclicker
                 ApplyAppearance();
             };
             Controls.Add(displays);
-            hint = Label("Click-through overlay for windowed / borderless games.\nStays on when minimized; turns off when Autoclicker closes.", 20, 398, 400, 45, 8F);
+            hint = Label("Click-through overlay for windowed / borderless games.\nStays on when minimized; turns off when Autoclicker closes.", 20, 474, 400, 45, 8F);
             hint.ForeColor = AppColors.MutedText;
             ApplyAppearance();
             AutoScaleDimensions = new SizeF(96, 96);
@@ -399,6 +445,14 @@ namespace Autoclicker
         }
 
         private void SyncEnabled(object sender, EventArgs e) { enabled.Checked = controller.Enabled; }
+        private TrackBar Slider(int x, int y, int width, int minimum, int maximum, int value, string name)
+        {
+            var slider = new TrackBar { Minimum = minimum, Maximum = maximum, Value = value,
+                TickStyle = TickStyle.None, SmallChange = 1, LargeChange = 2, BackColor = BackColor, AccessibleName = name };
+            slider.SetBounds(x, y, width, 30);
+            Controls.Add(slider);
+            return slider;
+        }
         private void ApplyAppearance()
         {
             preview.Invalidate();

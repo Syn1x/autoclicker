@@ -40,6 +40,7 @@ namespace Autoclicker
                 Check(Native.SendMessage(handle, 0x84, IntPtr.Zero, IntPtr.Zero).ToInt32() == -1, "Overlay hit-testing must pass through.");
                 controller.Options.Style = CrosshairStyle.OpenCross;
                 controller.Options.Size = 20;
+                controller.Options.Thickness = 3.5M;
                 controller.Options.White = false;
                 controller.Options.Hue = 120;
                 controller.Refresh();
@@ -54,9 +55,18 @@ namespace Autoclicker
             }
             using (var reopened = new CrosshairController(settings))
             {
-                Check(!reopened.Enabled && reopened.Options.Style == CrosshairStyle.OpenCross && reopened.Options.Size == 20 &&
+                Check(!reopened.Enabled && reopened.Options.Style == CrosshairStyle.OpenCross && reopened.Options.Size == 20 && reopened.Options.Thickness == 3.5M &&
                     reopened.Options.Color.ToArgb() == Color.Lime.ToArgb(), "Appearance must persist while visibility starts off.");
             }
+            File.WriteAllText(settings + ".crosshair.json", "{\"Style\":3,\"Size\":24,\"Hue\":240,\"White\":false,\"Outline\":false,\"Display\":\"saved monitor\"}");
+            var legacy = CrosshairOptions.Load(settings + ".crosshair.json");
+            Check(legacy.Thickness == 1.5M && legacy.Style == CrosshairStyle.Circle && legacy.Size == 24 && legacy.Hue == 240 &&
+                !legacy.White && !legacy.Outline && legacy.Display == "saved monitor", "Adding thickness must preserve all old appearance settings.");
+            legacy.Thickness = 99;
+            legacy.Save(settings + ".crosshair.json");
+            var repaired = CrosshairOptions.Load(settings + ".crosshair.json");
+            Check(repaired.Thickness == 1.5M && repaired.Style == CrosshairStyle.Circle && repaired.Size == 24,
+                "Invalid thickness must recover without resetting other settings.");
             File.WriteAllText(settings + ".crosshair.json", "{bad json");
             Check(CrosshairOptions.Load(settings + ".crosshair.json").Size == 4, "Broken settings must recover to defaults.");
             File.WriteAllText(settings + ".crosshair.json", "{\"Size\":999,\"Hue\":900,\"Style\":50}");
@@ -116,16 +126,43 @@ namespace Autoclicker
                         image.Save(Path.Combine(root, "crosshair-settings.png"), ImageFormat.Png);
                     }
                     TrackBar hue = null;
+                    TrackBar sizeSlider = null, thicknessSlider = null;
+                    NumericUpDown size = null, thickness = null;
                     ComboBox style = null;
                     foreach (Control control in dialog.Controls)
                     {
-                        if (control is TrackBar) hue = (TrackBar)control;
+                        if (control.AccessibleName == "Crosshair color hue") hue = (TrackBar)control;
+                        if (control.AccessibleName == "Crosshair size slider") sizeSlider = (TrackBar)control;
+                        if (control.AccessibleName == "Crosshair thickness slider") thicknessSlider = (TrackBar)control;
+                        if (control.AccessibleName == "Crosshair size in pixels") size = (NumericUpDown)control;
+                        if (control.AccessibleName == "Crosshair thickness in pixels") thickness = (NumericUpDown)control;
                         if (control.AccessibleName == "Crosshair style") style = (ComboBox)control;
                     }
+                    Check(!thickness.Enabled && !thicknessSlider.Enabled, "A solid dot uses size rather than line thickness.");
                     hue.Value = 240;
                     style.SelectedIndex = 4;
                     Check(controller.Options.Color.ToArgb() == Color.Blue.ToArgb() && controller.Options.Style == CrosshairStyle.CircleDot &&
                         controller.Options.Size == 16, "Color and style controls must update the live overlay.");
+                    Check(sizeSlider.Value == 16 && thickness.Enabled && thicknessSlider.Enabled, "Changing style must synchronize size and enable stroke controls.");
+                    sizeSlider.Value = 28;
+                    Check(controller.Options.Size == 28 && size.Value == 28, "Size slider must update both the number and the live overlay.");
+                    size.Value = 10;
+                    Check(sizeSlider.Value == 10 && controller.Options.Size == 10, "Size input must update the slider.");
+                    thicknessSlider.Value = 47;
+                    Check(controller.Options.Thickness == 4.7M && thickness.Value == 4.7M, "Thickness slider must update the number and overlay.");
+                    thickness.Value = 2.5M;
+                    Check(thicknessSlider.Value == 25 && controller.Options.Thickness == 2.5M, "Thickness input must update the slider.");
+                    style.SelectedIndex = 0;
+                    Check(!thickness.Enabled && controller.Options.Thickness == 2.5M, "Dot selection must retain the chosen line thickness.");
+                    style.SelectedIndex = 1;
+                    Check(thickness.Enabled && thickness.Value == 2.5M, "Line styles must restore the chosen thickness.");
+                    sizeSlider.Value = 32;
+                    thicknessSlider.Value = 80;
+                    using (var image = new Bitmap(dialog.Width, dialog.Height))
+                    {
+                        dialog.DrawToBitmap(image, new Rectangle(Point.Empty, dialog.Size));
+                        image.Save(Path.Combine(root, "crosshair-thickness.png"), ImageFormat.Png);
+                    }
                     controller.SetEnabled(false);
                     Check(!toggle.Checked, "Main toggle must stay in sync with settings.");
                     dialog.Close();
@@ -134,7 +171,33 @@ namespace Autoclicker
                 form.Close();
                 Check(!IsWindow(overlay) && form.IsDisposed, "Closing Autoclicker must destroy the crosshair and main form.");
             }
+            foreach (CrosshairStyle style in Enum.GetValues(typeof(CrosshairStyle)))
+            {
+                long thin = Coverage(style, 0.5M), thick = Coverage(style, 8M);
+                Check(style == CrosshairStyle.Dot ? thin == thick : thick > thin * 2,
+                    "Thickness must visibly change lines and rings while leaving solid dot size unchanged: " + style);
+                Check(Coverage(style, 0.5M, 2) > 0, "The size slider's minimum must still draw every style: " + style);
+            }
             File.WriteAllText(Path.Combine(root, "crosshair.txt"), "PASS: five transparent styles, hue slider, persisted appearance, screen centering, native click-through, no focus theft, independent toggle, minimize and close cleanup.");
+        }
+
+        private static long Coverage(CrosshairStyle style, decimal thickness, int size = 32)
+        {
+            var options = new CrosshairOptions { Style = style, Size = size, Thickness = thickness, Outline = false };
+            using (var image = new Bitmap(64, 64, PixelFormat.Format32bppPArgb))
+            {
+                using (Graphics paint = Graphics.FromImage(image)) CrosshairDrawing.Draw(paint, new PointF(32, 32), options);
+                long coverage = 0;
+                for (int y = 0; y < 64; y++)
+                    for (int x = 0; x < 64; x++)
+                    {
+                        int alpha = image.GetPixel(x, y).A;
+                        if (x == 0 || y == 0 || x == 63 || y == 63)
+                            Check(alpha == 0, "The largest/thickest crosshair must fit without clipping.");
+                        coverage += alpha;
+                    }
+                return coverage;
+            }
         }
     }
 }

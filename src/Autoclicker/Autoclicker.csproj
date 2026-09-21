@@ -4,7 +4,7 @@
     <TargetFramework>net48</TargetFramework>
     <AssemblyName>Autoclicker</AssemblyName>
     <RootNamespace>Autoclicker</RootNamespace>
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <ApplicationIcon>../../assets/autoclicker.ico</ApplicationIcon>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
