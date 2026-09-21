@@ -1,4 +1,5 @@
-Autoclicker now includes automatic updates from this repository.
+Autoclicker 1.0.1 includes dependency license notices in installed and portable builds.
+The automatic update features introduced in 1.0.0 are included:
 
 - Downloads updates on launch and installs them when the app closes.
 - Shows the installed version and includes a manual update check.
