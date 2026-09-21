@@ -33,9 +33,13 @@ Use windowed or borderless games. Exclusive fullscreen games and other protected
 
 ## Updates
 
-The app checks this repository's `autoclicker-update.json` release asset on launch. **Check for updates** checks manually. A newer standalone EXE downloads in the background and is checked against the release's SHA-256 hash, size, assembly identity, and version. A failed or cancelled download leaves the current app usable.
+The app checks this repository's `autoclicker-update.json` release asset on launch. **Check for updates** checks manually. When a new version is found, the footer shows **Confirm update**. Nothing downloads or applies until you click it; you can keep using the app or close it without confirming.
 
-A verified update applies when you close the app. Windows cannot replace a running EXE, so the app temporarily copies itself into `%TEMP%\Autoclicker-updates` as a helper. The helper waits for the original process to exit, verifies the update again, and atomically replaces the same EXE in its existing location. It refuses to overwrite a file that changed after the update was prepared. It exits after the operation; the next launch cleans up the temporary helper files. No permanent updater is installed.
+After confirmation, the standalone EXE downloads in the background and is checked against the release's SHA-256 hash, size, assembly identity, and version. The button becomes **Restart to update** only after verification completes. Click it when ready: clicking stops, the app closes, and the updated EXE reopens automatically in its stopped state. A failed download leaves the current app usable; a helper launch failure keeps the app open so you can retry.
+
+Windows cannot replace a running EXE, so the app temporarily copies itself into `%TEMP%\Autoclicker-updates` as a helper. The helper waits for the original process to exit, verifies the update again, atomically replaces the same EXE in its existing location, then reopens that EXE if you requested a restart. It refuses to overwrite a file that changed after the update was prepared. Closing normally after a confirmed download still applies the update, without reopening. The helper exits after the operation; a subsequent launch cleans up temporary helper files. No permanent updater is installed.
+
+**Updating from 1.1.x or 1.2.x:** those versions download automatically and apply on close. Close and reopen once to get this version; the confirmation and restart controls apply to future updates from 1.3.0 onward.
 
 The EXE needs write permission to its folder to update. A read-only location keeps the existing version; move the EXE to a writable folder and check again. Close other running copies before reopening after an update.
 
@@ -47,7 +51,7 @@ Install the .NET 9 SDK (or a compatible newer SDK) and use PowerShell on Windows
 
 ```powershell
 ./scripts/build.ps1
-./scripts/build.ps1 -Version 1.2.1 -Package
+./scripts/build.ps1 -Version 1.3.0 -Package
 ```
 
 The script restores locked build dependencies, builds, runs non-clicking tests, and optionally creates `autoclicker.exe`, `autoclicker-update.json`, and `SHA256SUMS.txt`. Build files go into `artifacts/`, or a directory supplied with `-BuildRoot`. The distributed EXE has only Windows/.NET Framework dependencies and embeds its icon; it requires no adjacent DLL or configuration file.
@@ -58,7 +62,7 @@ Tests exercise an EXE-only launch, the real updater helper and parent-exit wait,
 
 1. Edit `RELEASE-NOTES.md` to describe the new release.
 2. Commit and push the code and release notes to `main`.
-3. In **Actions → Publish release → Run workflow**, enter a newer version such as `1.2.2`.
+3. In **Actions → Publish release → Run workflow**, enter a newer version such as `1.3.1`.
 4. The workflow tests and publishes the standalone EXE and its update manifest. Users receive it on their next update check.
 
 The workflow uses GitHub's temporary repository token. The EXE contains no GitHub credentials. Update URLs are restricted to this repository; the manifest cannot redirect the app to an arbitrary download host. Public HTTPS release assets and their checksum manifest are the update trust source. A publisher signing certificate has not been configured.

@@ -156,8 +156,71 @@ namespace Autoclicker
                 Check(dependency.Name == "mscorlib" || dependency.Name.StartsWith("System"), "Non-framework runtime dependency: " + dependency.Name);
             using (var backend = new PortableUpdateBackend(portable, new Version(AppInfo.Version), new HttpClient(new Source(manifest, payload)), jobs)) { }
             Check(!Directory.Exists(job), "Next launch did not clean the exited helper.");
+            TestRestart(root, executable);
             File.WriteAllText(Path.Combine(reports, "PortableUpdateProbe.txt"),
                 "PASS: single EXE launch, bounded manifest, version selection, SHA-256, truncated/corrupt/cancelled downloads, changed/locked target protection, real helper waits for parent, atomic replacement, custom filename and special paths, helper exit and cleanup. No real input sent.");
+        }
+
+        private static void TestRestart(string root, string helperSource)
+        {
+            // Build a harmless replacement EXE that records its launch and exits.
+            // This exercises the real updater without opening the live app or clicking.
+            string build = Path.Combine(root, "restart-fixture");
+            string appFolder = Path.Combine(root, "restart folder with spaces & apostrophe's");
+            string job = Path.Combine(root, "restart-job");
+            Directory.CreateDirectory(build);
+            Directory.CreateDirectory(appFolder);
+            Directory.CreateDirectory(job);
+            string marker = Path.Combine(root, "restarted.txt");
+            string fixture = Path.Combine(build, "Autoclicker.exe");
+            using (var compiler = new Microsoft.CSharp.CSharpCodeProvider())
+            {
+                var parameters = new System.CodeDom.Compiler.CompilerParameters {
+                    GenerateExecutable = true, OutputAssembly = fixture, CompilerOptions = "/target:winexe /optimize"
+                };
+                string code = "using System; using System.IO; [assembly: System.Reflection.AssemblyVersion(\"" + AppInfo.Version + ".0\")] " +
+                    "class RestartFixture { static void Main() { File.WriteAllLines(@\"" + marker.Replace("\"", "\"\"") +
+                    "\", new string[] { System.Reflection.Assembly.GetExecutingAssembly().Location, Environment.CurrentDirectory, " +
+                    "Environment.GetCommandLineArgs().Length.ToString() }); } }";
+                var result = compiler.CompileAssemblyFromSource(parameters, code);
+                Check(!result.Errors.HasErrors, "Could not compile restart fixture: " + String.Join("; ",
+                    System.Linq.Enumerable.Select(System.Linq.Enumerable.Cast<System.CodeDom.Compiler.CompilerError>(result.Errors), e => e.ToString())));
+            }
+            string target = Path.Combine(appFolder, "my autoclicker.exe");
+            File.Copy(helperSource, target);
+            File.Copy(fixture, Path.Combine(job, "update.exe"));
+            string helper = Path.Combine(job, "updater.exe");
+            File.Copy(helperSource, helper);
+            var release = new UpdateManifest { Version = AppInfo.Version, Sha256 = UpdateFiles.Hash(fixture), Size = new FileInfo(fixture).Length };
+            var plan = new UpdatePlan { Target = target, OriginalHash = UpdateFiles.Hash(target), Release = release, Restart = true };
+            string ready = Path.Combine(root, "restart-parent-ready.txt");
+            string planPath = Path.Combine(job, "plan.json");
+            using (Process parent = Start(typeof(PortableUpdateProbe).Assembly.Location, "--hold \"" + ready + "\""))
+            {
+                Stopwatch wait = Stopwatch.StartNew();
+                while (!File.Exists(ready) && wait.ElapsedMilliseconds < 5000) Thread.Sleep(20);
+                Check(File.Exists(ready), "Restart test parent did not start.");
+                plan.ParentId = parent.Id;
+                plan.ParentStart = parent.StartTime.ToUniversalTime().Ticks;
+                UpdateFiles.WriteJson(planPath, plan);
+                using (Process updater = Start(helper, "--apply-update \"" + planPath + "\""))
+                {
+                    Thread.Sleep(100);
+                    Check(!File.Exists(marker) && UpdateFiles.Hash(target) == plan.OriginalHash,
+                        "Restart must wait for the original process to exit.");
+                    Check(parent.WaitForExit(5000), "Restart test parent did not exit.");
+                    Check(updater.WaitForExit(10000) && updater.ExitCode == 0, "Restarting update helper failed.");
+                }
+            }
+            Stopwatch launched = Stopwatch.StartNew();
+            while (!File.Exists(marker) && launched.ElapsedMilliseconds < 5000) Thread.Sleep(20);
+            Check(File.Exists(marker), "Updated EXE was not reopened.");
+            string[] launch = File.ReadAllLines(marker);
+            Check(launch.Length == 3 && launch[0] == target && launch[1] == appFolder && launch[2] == "1",
+                "Restart must open the same EXE in its original folder without forwarding arguments.");
+            Check(UpdateFiles.Hash(target) == release.Sha256 && Directory.GetFiles(appFolder).Length == 1,
+                "Restart must keep the single-file portable layout.");
+            File.WriteAllText(Path.Combine(root, "restart-result.txt"), "PASS: real helper waited for parent, replaced the EXE and launched the verified replacement from its original folder.");
         }
 
         private static Process Start(string executable, string arguments)

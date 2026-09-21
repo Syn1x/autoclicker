@@ -37,7 +37,7 @@ namespace Autoclicker
         bool ReadyToApply { get; }
         Task<string> CheckAsync(CancellationToken cancellation);
         Task DownloadAsync(Action<int> progress, CancellationToken cancellation);
-        void ApplyOnExit();
+        void ApplyOnExit(bool restart = false);
     }
     internal sealed class UpdateCoordinator : IDisposable
     {
@@ -46,16 +46,29 @@ namespace Autoclicker
         private bool closed;
         private bool ready;
         private bool applyQueued;
+        private string availableVersion;
         internal event Action Changed;
         internal bool Busy { get; private set; }
-        internal bool CanCheck { get { return !closed && backend.Available && !Busy && !ready; } }
+        internal bool CanCheck { get { return !closed && backend.Available && !Busy && !ready && availableVersion == null; } }
+        internal bool CanConfirm { get { return !closed && !Busy && !ready && availableVersion != null; } }
+        internal bool CanRestart { get { return !closed && !Busy && ready && !applyQueued; } }
+        internal string ActionText
+        {
+            get
+            {
+                if (applyQueued) return "Restarting...";
+                if (ready) return "Restart to update";
+                if (Busy) return availableVersion == null ? "Checking..." : "Downloading...";
+                return availableVersion == null ? "Check for updates" : "Confirm update";
+            }
+        }
         internal string Status { get; private set; }
 
         internal UpdateCoordinator(IUpdateBackend updateBackend)
         {
             backend = updateBackend;
             ready = backend.ReadyToApply;
-            Status = ready ? "Update ready / applies on close" : backend.Available
+            Status = ready ? "Update ready / restart to apply" : backend.Available
                 ? "Updates check automatically on launch" : "Run this EXE from a writable folder";
         }
 
@@ -75,9 +88,23 @@ namespace Autoclicker
             {
                 string version = await backend.CheckAsync(cancellation.Token);
                 if (closed) return;
-                if (version == null) { Status = "Up to date"; return; }
-                Status = "Downloading v" + version + "...";
-                Notify();
+                availableVersion = version;
+                Status = version == null ? "Up to date" : "v" + version + " available / confirm to download";
+            }
+            catch (OperationCanceledException) { if (!closed) Status = "Update check cancelled / try again"; }
+            catch (Exception) { if (!closed) Status = "Updates unavailable / try again later"; }
+            finally { Busy = false; Notify(); }
+        }
+
+        internal async Task ConfirmAsync()
+        {
+            if (!CanConfirm) return;
+            Busy = true;
+            string version = availableVersion;
+            Status = "Downloading v" + version + "...";
+            Notify();
+            try
+            {
                 var progress = new Progress<int>(value =>
                 {
                     if (!closed && Busy && !ready)
@@ -90,7 +117,7 @@ namespace Autoclicker
                 if (closed) return;
                 ready = backend.ReadyToApply;
                 if (!ready) throw new InvalidOperationException("The downloaded update was not prepared.");
-                Status = "v" + version + " ready / applies on close";
+                Status = "v" + version + " ready / restart to apply";
             }
             catch (OperationCanceledException)
             {
@@ -108,6 +135,27 @@ namespace Autoclicker
             {
                 Busy = false;
                 Notify();
+            }
+        }
+
+        internal bool RestartToApply()
+        {
+            if (!CanRestart) return false;
+            try
+            {
+                // Start the waiting helper before closing, so launch failures
+                // leave the app open and the Restart button available to retry.
+                backend.ApplyOnExit(true);
+                applyQueued = true;
+                Status = "Restarting to apply the update...";
+                Notify();
+                return true;
+            }
+            catch (Exception)
+            {
+                Status = "Could not start the update / click Restart to retry";
+                Notify();
+                return false;
             }
         }
 

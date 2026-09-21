@@ -39,6 +39,7 @@ namespace Autoclicker
         [DataMember] internal UpdateManifest Release;
         [DataMember] internal int ParentId;
         [DataMember] internal long ParentStart;
+        [DataMember] internal bool Restart;
     }
 
     internal static class UpdateFiles
@@ -231,11 +232,12 @@ namespace Autoclicker
             }
         }
 
-        public void ApplyOnExit()
+        public void ApplyOnExit(bool restart = false)
         {
             if (plan == null || launched) return;
             string helper = Path.Combine(job, "updater.exe");
             string planPath = Path.Combine(job, "plan.json");
+            plan.Restart = restart;
             UpdateFiles.WriteJson(planPath, plan);
             File.Copy(executable, helper, true);
             // A temporary copy of this same standalone EXE does only the file replacement.
@@ -277,6 +279,18 @@ namespace Autoclicker
                 catch (ArgumentException) { } // The original process has already exited.
                 Apply(plan, directory);
                 File.WriteAllText(Path.Combine(directory, "completed.txt"), "Updated " + plan.Release.Version);
+                if (plan.Restart)
+                {
+                    // Waited for the old process (and its single-instance mutex)
+                    // to exit before replacing and reopening the same EXE.
+                    UpdateFiles.ValidateExecutable(plan.Target, plan.Release);
+                    using (Process app = Process.Start(new ProcessStartInfo(plan.Target) {
+                        UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(plan.Target)
+                    }))
+                    {
+                        if (app == null) throw new IOException("Update applied; reopen Autoclicker manually.");
+                    }
+                }
                 return 0;
             }
             catch (Exception error)

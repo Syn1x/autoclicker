@@ -421,7 +421,18 @@ namespace Autoclicker
             checkUpdates = MakeButton("Check for updates", 466, 758, 134, AppColors.Button, soft);
             checkUpdates.Height = 29;
             checkUpdates.Enabled = false;
-            checkUpdates.Click += async delegate { if (updates != null) await updates.CheckAsync(); };
+            checkUpdates.Click += async delegate
+            {
+                if (updates == null) return;
+                if (updates.CanRestart)
+                {
+                    if (choosingKey) CancelKeyCapture();
+                    StopClicking("Restarting to apply the update...");
+                    if (updates.RestartToApply()) Close();
+                }
+                else if (updates.CanConfirm) await updates.ConfirmAsync();
+                else await updates.CheckAsync();
+            };
 
             timer.Interval = 15;
             timer.Tick += OnTick;
@@ -447,7 +458,8 @@ namespace Autoclicker
         {
             if (IsDisposed || Disposing) return;
             updateStatus.Text = updates.Status;
-            checkUpdates.Enabled = updates.CanCheck;
+            checkUpdates.Text = updates.ActionText;
+            checkUpdates.Enabled = updates.CanCheck || updates.CanConfirm || updates.CanRestart;
         }
 
         private void BeginKeyCapture()
