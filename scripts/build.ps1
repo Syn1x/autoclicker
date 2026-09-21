@@ -1,5 +1,5 @@
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.0.2',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.0.3',
     [string]$BuildRoot = (Join-Path $PSScriptRoot '..\artifacts'),
     [switch]$Package,
     [string]$SigningParameters = $env:AUTOCLICKER_SIGN_PARAMS
@@ -30,6 +30,7 @@ try {
         $packArguments = @('pack','--packId','Syn1x.Autoclicker','--packTitle','Autoclicker',
             '--packAuthors','Syn1x','--packVersion',$Version,'--packDir',$publish,
             '--mainExe','Autoclicker.exe','--framework','net48','--runtime','win-x64',
+            '--icon',(Join-Path $repoRoot 'assets\autoclicker.ico'),
             '--outputDir',$release,'--delta','None')
         if ($SigningParameters) { $packArguments += @('--signParams', $SigningParameters) }
         & dotnet tool run vpk @packArguments

@@ -200,6 +200,7 @@ namespace Autoclicker
         private bool choosingKey;
         private GlobalHotkeys hotkeys;
         private ToggleSounds sounds;
+        private Icon applicationIcon;
         private readonly int processId = Process.GetCurrentProcess().Id;
         private readonly Stopwatch clock = Stopwatch.StartNew();
         private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
@@ -240,6 +241,11 @@ namespace Autoclicker
             settingsPath = configurationPath;
             toggleKey = KeySettings.Load(settingsPath);
             Text = "Autoclicker";
+            using (Stream iconStream = typeof(ClickerForm).Assembly.GetManifestResourceStream("Autoclicker.AppIcon.ico"))
+            {
+                applicationIcon = new Icon(iconStream);
+                Icon = applicationIcon;
+            }
             ClientSize = new Size(620, 798);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.None;
@@ -706,6 +712,7 @@ namespace Autoclicker
             if (disposing)
             {
                 if (sounds != null) { sounds.Dispose(); sounds = null; }
+                if (applicationIcon != null) { applicationIcon.Dispose(); applicationIcon = null; }
             }
         }
     }
