@@ -35,6 +35,15 @@ try {
         if ($SigningParameters) { $packArguments += @('--signParams', $SigningParameters) }
         & dotnet tool run vpk @packArguments
         if ($LASTEXITCODE -ne 0) { throw 'Packaging failed.' }
+        # Keep the public installer name simple without changing the update package identity.
+        $installerName = 'autoclicker.exe'
+        Rename-Item -LiteralPath (Join-Path $release 'Syn1x.Autoclicker-win-Setup.exe') -NewName $installerName
+        $assetManifestPath = Join-Path $release 'assets.win.json'
+        $assetManifest = Get-Content -LiteralPath $assetManifestPath -Raw | ConvertFrom-Json
+        foreach ($asset in $assetManifest) {
+            if ($asset.Type -eq 'Installer') { $asset.RelativeFileName = $installerName }
+        }
+        $assetManifest | ConvertTo-Json -Depth 4 -Compress | Set-Content -LiteralPath $assetManifestPath -Encoding utf8
         Get-ChildItem -LiteralPath $release -File | Where-Object { $_.Extension -in '.exe','.zip','.nupkg','.json' } |
             ForEach-Object { '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name } |
             Set-Content -LiteralPath (Join-Path $release 'SHA256SUMS.txt') -Encoding ascii

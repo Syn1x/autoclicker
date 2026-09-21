@@ -4,7 +4,7 @@ A Windows autoclicker with configurable keyboard control, a stop timer, sound cu
 
 ## Download
 
-Download the **Setup.exe** installer from [the latest release](https://github.com/Syn1x/autoclicker/releases/latest). Install once; future releases download automatically when the app opens and install when it closes. A portable ZIP is also available: extract the entire ZIP and keep its files together.
+Download [**autoclicker.exe**](https://github.com/Syn1x/autoclicker/releases/latest/download/autoclicker.exe). Install once; future releases download automatically when the app opens and install when it closes. A portable ZIP is also available from [the latest release](https://github.com/Syn1x/autoclicker/releases/latest): extract the entire ZIP and keep its files together.
 
 Windows 10/11, x64, and .NET Framework 4.8 are required. Setup can install the framework if necessary. Current releases are unsigned; Windows may display an unknown-publisher warning.
 
