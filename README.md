@@ -10,4 +10,4 @@ There is no installer, ZIP to extract, application folder, shortcut creation, or
 
 **Upgrading from 1.0.x:** close the old app and download this EXE once. The previous installed/ZIP editions use a different update system. Version 1.1.0 and later update the standalone EXE directly.
 
-[Code signing policy](CODE-SIGNING.md) · [Privacy policy](PRIVACY.md)
+[MIT license](LICENSE) · [Code signing policy](CODE-SIGNING.md) · [Privacy policy](PRIVACY.md)
