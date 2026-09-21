@@ -17,8 +17,14 @@ namespace Autoclicker
         [STAThread]
         private static int Main(string[] args)
         {
-            if (args.Length == 4 && args[0] == "--package-update")
-                return PackageUpdateProbe.Run(args[1], args[2], args[3]);
+            if (args.Length == 3 && args[0] == "--public-update")
+                return PortableUpdateProbe.RunPublicUpdate(args[1], args[2]);
+            if (args.Length == 2 && args[0] == "--hold")
+            {
+                File.WriteAllText(args[1], "ready");
+                Thread.Sleep(1500);
+                return 0;
+            }
             try
             {
                 Application.EnableVisualStyles();
@@ -26,6 +32,7 @@ namespace Autoclicker
                 string root = Path.GetFullPath(args[0]);
                 Directory.CreateDirectory(root);
                 TestUpdates().GetAwaiter().GetResult();
+                PortableUpdateProbe.Run(root).GetAwaiter().GetResult();
                 Check(Verification.Run(Path.Combine(root, "engine.txt")) == 0, "Engine verification failed.");
                 foreach (Type probe in new Type[] { typeof(KeyBindingProbe), typeof(CheckboxPaintProbe) })
                 {
@@ -33,7 +40,7 @@ namespace Autoclicker
                         new object[] { new string[] { Path.Combine(root, probe.Name + ".txt") } });
                     Check(code == 0, probe.Name + " failed.");
                 }
-                Console.WriteLine("PASS: updater lifecycle, engine, keyboard, timer, settings, close, checkbox repaint. No real input sent.");
+                Console.WriteLine("PASS: standalone EXE, real self-update helper, update validation/cancellation, engine, keyboard, timer, settings, close, checkbox repaint. No real input sent.");
                 return 0;
             }
             catch (Exception error) { Console.Error.WriteLine(error); return 1; }
@@ -105,7 +112,7 @@ namespace Autoclicker
             internal int Checks, Downloads, Applies;
             internal bool FailDownload, FailCheck, WaitForCancellation, Cancelled;
             internal TaskCompletionSource<string> CheckGate;
-            public Task<string> CheckAsync()
+            public Task<string> CheckAsync(CancellationToken cancellation)
             {
                 Checks++;
                 if (FailCheck) throw new IOException("Offline");

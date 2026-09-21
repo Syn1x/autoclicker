@@ -42,7 +42,8 @@ namespace Autoclicker
             if (args.Length == 2 && args[0] == "--self-test")
                 return Verification.Run(args[1]);
 
-            Velopack.VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
+            if (args.Length == 2 && args[0] == "--apply-update")
+                return PortableUpdater.RunHelper(args[1]);
 
             Native.SetProcessDPIAware();
             Application.EnableVisualStyles();
@@ -74,7 +75,8 @@ namespace Autoclicker
                     FocusExistingWindow();
                     return 0;
                 }
-                using (UpdateCoordinator updates = new UpdateCoordinator(new VelopackBackend()))
+                using (PortableUpdateBackend backend = new PortableUpdateBackend())
+                using (UpdateCoordinator updates = new UpdateCoordinator(backend))
                 {
                     using (ClickerForm form = new ClickerForm(true))
                     {

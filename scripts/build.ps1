@@ -1,8 +1,7 @@
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.0.3',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.1.0',
     [string]$BuildRoot = (Join-Path $PSScriptRoot '..\artifacts'),
-    [switch]$Package,
-    [string]$SigningParameters = $env:AUTOCLICKER_SIGN_PARAMS
+    [switch]$Package
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -24,29 +23,19 @@ try {
     & dotnet publish $project -c Release --no-restore -o $publish @properties
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
     if ($Package) {
-        & dotnet tool restore
-        if ($LASTEXITCODE -ne 0) { throw 'Packaging tool restore failed.' }
         $release = Join-Path $BuildRoot "releases-$Version"
-        $packArguments = @('pack','--packId','Syn1x.Autoclicker','--packTitle','Autoclicker',
-            '--packAuthors','Syn1x','--packVersion',$Version,'--packDir',$publish,
-            '--mainExe','Autoclicker.exe','--framework','net48','--runtime','win-x64',
-            '--icon',(Join-Path $repoRoot 'assets\autoclicker.ico'),
-            '--outputDir',$release,'--delta','None')
-        if ($SigningParameters) { $packArguments += @('--signParams', $SigningParameters) }
-        & dotnet tool run vpk @packArguments
-        if ($LASTEXITCODE -ne 0) { throw 'Packaging failed.' }
-        # Keep the public installer name simple without changing the update package identity.
-        $installerName = 'autoclicker.exe'
-        Rename-Item -LiteralPath (Join-Path $release 'Syn1x.Autoclicker-win-Setup.exe') -NewName $installerName
-        $assetManifestPath = Join-Path $release 'assets.win.json'
-        $assetManifest = Get-Content -LiteralPath $assetManifestPath -Raw | ConvertFrom-Json
-        foreach ($asset in $assetManifest) {
-            if ($asset.Type -eq 'Installer') { $asset.RelativeFileName = $installerName }
+        New-Item -ItemType Directory -Path $release -Force | Out-Null
+        $exe = Join-Path $release 'autoclicker.exe'
+        Copy-Item -LiteralPath (Join-Path $publish 'Autoclicker.exe') -Destination $exe
+        $manifest = [ordered]@{
+            version = $Version
+            sha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+            size = (Get-Item -LiteralPath $exe).Length
         }
-        $assetManifest | ConvertTo-Json -Depth 4 -Compress | Set-Content -LiteralPath $assetManifestPath -Encoding utf8
-        Get-ChildItem -LiteralPath $release -File | Where-Object { $_.Extension -in '.exe','.zip','.nupkg','.json' } |
+        $manifest | ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $release 'autoclicker-update.json') -Encoding ascii
+        Get-ChildItem -LiteralPath $release -File | Where-Object { $_.Extension -in '.exe','.json' } |
             ForEach-Object { '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name } |
             Set-Content -LiteralPath (Join-Path $release 'SHA256SUMS.txt') -Encoding ascii
-        Write-Output "Release files: $release"
+        Write-Output "Standalone release: $exe"
     }
 } finally { Pop-Location }

@@ -3,9 +3,6 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Velopack;
-using Velopack.Locators;
-using Velopack.Sources;
 
 namespace Autoclicker
 {
@@ -17,10 +14,19 @@ namespace Autoclicker
         {
             get
             {
-                string root = VelopackLocator.Current.RootAppDir;
-                if (String.IsNullOrEmpty(root))
-                    root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Syn1x.Autoclicker");
-                return Path.Combine(root, "Autoclicker.settings");
+                string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string path = Path.Combine(local, "Autoclicker", "Autoclicker.settings");
+                if (!File.Exists(path))
+                {
+                    // Migrate only the keyboard binding; never copy an installed application.
+                    string[] legacy = {
+                        Path.Combine(local, "Syn1x.Autoclicker", "Autoclicker.settings"),
+                        Path.Combine(Path.GetDirectoryName(typeof(AppInfo).Assembly.Location), "Autoclicker.settings")
+                    };
+                    foreach (string candidate in legacy)
+                        if (File.Exists(candidate)) { KeySettings.TrySave(path, KeySettings.Load(candidate)); break; }
+                }
+                return path;
             }
         }
     }
@@ -29,39 +35,10 @@ namespace Autoclicker
     {
         bool Available { get; }
         bool ReadyToApply { get; }
-        Task<string> CheckAsync();
+        Task<string> CheckAsync(CancellationToken cancellation);
         Task DownloadAsync(Action<int> progress, CancellationToken cancellation);
         void ApplyOnExit();
     }
-
-    internal sealed class VelopackBackend : IUpdateBackend
-    {
-        private readonly UpdateManager manager;
-        private UpdateInfo pending;
-        internal VelopackBackend()
-        {
-            manager = new UpdateManager(new GithubSource(AppInfo.RepositoryUrl, null, false));
-        }
-        public bool Available { get { return manager.IsInstalled; } }
-        public bool ReadyToApply { get { return Available && manager.UpdatePendingRestart != null; } }
-        public async Task<string> CheckAsync()
-        {
-            pending = await manager.CheckForUpdatesAsync().ConfigureAwait(false);
-            return pending == null ? null : pending.TargetFullRelease.Version.ToString();
-        }
-        public Task DownloadAsync(Action<int> progress, CancellationToken cancellation)
-        {
-            if (pending == null) throw new InvalidOperationException("Check for an update before downloading.");
-            return manager.DownloadUpdatesAsync(pending, progress, cancellation);
-        }
-        public void ApplyOnExit()
-        {
-            // Called only after the form, mouse timer, sound and keyboard hook
-            // have all closed. The helper exits when installation is complete.
-            manager.WaitExitThenApplyUpdates(null, silent: true, restart: false);
-        }
-    }
-
     internal sealed class UpdateCoordinator : IDisposable
     {
         private readonly IUpdateBackend backend;
@@ -78,8 +55,8 @@ namespace Autoclicker
         {
             backend = updateBackend;
             ready = backend.ReadyToApply;
-            Status = ready ? "Update ready / installs on close" : backend.Available
-                ? "Updates check automatically on launch" : "Install a release to enable updates";
+            Status = ready ? "Update ready / applies on close" : backend.Available
+                ? "Updates check automatically on launch" : "Run this EXE from a writable folder";
         }
 
         private void Notify()
@@ -96,7 +73,7 @@ namespace Autoclicker
             Notify();
             try
             {
-                string version = await backend.CheckAsync();
+                string version = await backend.CheckAsync(cancellation.Token);
                 if (closed) return;
                 if (version == null) { Status = "Up to date"; return; }
                 Status = "Downloading v" + version + "...";
@@ -113,11 +90,15 @@ namespace Autoclicker
                 if (closed) return;
                 ready = backend.ReadyToApply;
                 if (!ready) throw new InvalidOperationException("The downloaded update was not prepared.");
-                Status = "v" + version + " ready / installs on close";
+                Status = "v" + version + " ready / applies on close";
             }
             catch (OperationCanceledException)
             {
                 if (!closed) Status = "Update download cancelled / try again";
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Status = "Move this EXE to a writable folder to update";
             }
             catch (Exception)
             {
@@ -134,7 +115,7 @@ namespace Autoclicker
         {
             if (applyQueued || !ready) return;
             try { backend.ApplyOnExit(); applyQueued = true; }
-            catch (Exception) { /* Keep the verified package for the next launch. */ }
+            catch (Exception) { /* The original EXE remains usable; a later check can retry. */ }
         }
 
         public void Dispose()

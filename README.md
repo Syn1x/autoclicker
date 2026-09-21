@@ -1,12 +1,14 @@
 # Autoclicker
 
-A Windows autoclicker with configurable keyboard control, a stop timer, sound cues, and automatic updates.
+A single portable Windows EXE with configurable keyboard control, a stop timer, sound cues, and automatic updates.
 
-## Download
+## Download and run
 
-Download [**autoclicker.exe**](https://github.com/Syn1x/autoclicker/releases/latest/download/autoclicker.exe). Install once; future releases download automatically when the app opens and install when it closes. A portable ZIP is also available from [the latest release](https://github.com/Syn1x/autoclicker/releases/latest): extract the entire ZIP and keep its files together.
+Download [**autoclicker.exe**](https://github.com/Syn1x/autoclicker/releases/latest/download/autoclicker.exe) and double-click it. That is the complete app. You can move it or send that one file to someone else.
 
-Windows 10/11, x64, and .NET Framework 4.8 are required. Setup can install the framework if necessary. Current releases are unsigned; Windows may display an unknown-publisher warning.
+There is no installer, ZIP to extract, application folder, shortcut creation, or background service. Keep the EXE in a writable location such as Downloads or Desktop so it can replace itself when an update is ready. Windows 10/11 with .NET Framework 4.8 is required. Releases are currently unsigned.
+
+**Upgrading from 1.0.x:** close the old app and download this EXE once. The previous installed/ZIP editions use a different update system. Version 1.1.0 and later update the standalone EXE directly.
 
 ## Use
 
@@ -17,13 +19,17 @@ Windows 10/11, x64, and .NET Framework 4.8 are required. Setup can install the f
 - Rising and falling sounds indicate start and stop.
 - Moving over this app's window or closing it stops clicking. Closing exits the application.
 
-The selected key is stored outside the versioned app directory and survives updates. Other click/timer options reset to their defaults each launch. This sends ordinary Windows left mouse input; it does not detect team slots or game state.
+The selected key is saved in `%LOCALAPPDATA%\Autoclicker\Autoclicker.settings`, outside the EXE, so it survives updates and does not travel with the file you share. The previous edition's key is imported if available. Other click/timer options reset to their defaults each launch. This sends ordinary Windows left mouse input; it does not detect team slots or game state.
 
 ## Updates
 
-The app checks this repository's stable GitHub Releases on launch. **Check for updates** checks manually. Downloads run asynchronously; failures leave the current version usable. Velopack verifies downloaded package checksums. Prepared updates install only after the window, keyboard hook, click timer and audio resources have closed. The short-lived updater exits afterward; no permanent background service is installed.
+The app checks this repository's `autoclicker-update.json` release asset on launch. **Check for updates** checks manually. A newer standalone EXE downloads in the background and is checked against the release's SHA-256 hash, size, assembly identity, and version. A failed or cancelled download leaves the current app usable.
 
-People using the original standalone EXE need to download this packaged release once. Copying only the new inner EXE does not include its dependencies or updater.
+A verified update applies when you close the app. Windows cannot replace a running EXE, so the app temporarily copies itself into `%TEMP%\Autoclicker-updates` as a helper. The helper waits for the original process to exit, verifies the update again, and atomically replaces the same EXE in its existing location. It refuses to overwrite a file that changed after the update was prepared. It exits after the operation; the next launch cleans up the temporary helper files. No permanent updater is installed.
+
+The EXE needs write permission to its folder to update. A read-only location keeps the existing version; move the EXE to a writable folder and check again. Close other running copies before reopening after an update.
+
+Only `autoclicker.exe` is needed by users. The JSON manifest and checksum list on the release page support the updater and download verification; they do not need to be downloaded manually.
 
 ## Build and test
 
@@ -31,22 +37,18 @@ Install the .NET 9 SDK (or a compatible newer SDK) and use PowerShell on Windows
 
 ```powershell
 ./scripts/build.ps1
-./scripts/build.ps1 -Version 1.0.3 -Package
+./scripts/build.ps1 -Version 1.1.0 -Package
 ```
 
-The script restores locked dependencies, builds, runs non-clicking tests, and optionally packages an installer, portable ZIP, update packages and feed. Build files go into `artifacts/`, or a directory supplied with `-BuildRoot`.
+The script restores locked build dependencies, builds, runs non-clicking tests, and optionally creates `autoclicker.exe`, `autoclicker-update.json`, and `SHA256SUMS.txt`. Build files go into `artifacts/`, or a directory supplied with `-BuildRoot`. The distributed EXE has only Windows/.NET Framework dependencies and embeds its icon; it requires no adjacent DLL or configuration file.
+
+Tests exercise an EXE-only launch, the real updater helper and parent-exit wait, checksum/version validation, failed and cancelled downloads, locked or changed targets, custom filenames, helper cleanup, and the keyboard/timer/UI behavior.
 
 ## Publish an update
 
 1. Edit `RELEASE-NOTES.md` to describe the new release.
 2. Commit and push the code and release notes to `main`.
-3. In **Actions → Publish release → Run workflow**, enter a new version such as `1.0.3`.
-4. The workflow tests, packages and publishes the installer and update feed. Existing users receive it on their next update check.
+3. In **Actions → Publish release → Run workflow**, enter a newer version such as `1.1.1`.
+4. The workflow tests and publishes the standalone EXE and its update manifest. Users receive it on their next update check.
 
-The workflow uses GitHub's temporary repository token. The distributed app contains no GitHub credentials and downloads public releases without a login. Publishing a newer version is the update trigger; a normal code push only builds and tests.
-
-### Signing
-
-A publisher code-signing certificate has not been configured. To sign on a build machine with a trusted certificate available, pass SignTool options with `-SigningParameters` (or `AUTOCLICKER_SIGN_PARAMS`). Velopack signs the packaged executable and installer. Keep certificates and credentials in protected stores or CI secrets, never in the repository. Do not share a self-signed certificate as a substitute for a trusted publisher certificate.
-
-Updater documentation: [Velopack](https://docs.velopack.io/).
+The workflow uses GitHub's temporary repository token. The EXE contains no GitHub credentials. Update URLs are restricted to this repository; the manifest cannot redirect the app to an arbitrary download host. Public HTTPS release assets and their checksum manifest are the update trust source. A publisher signing certificate has not been configured.

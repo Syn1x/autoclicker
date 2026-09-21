@@ -4,7 +4,7 @@
     <TargetFramework>net48</TargetFramework>
     <AssemblyName>Autoclicker</AssemblyName>
     <RootNamespace>Autoclicker</RootNamespace>
-    <Version>1.0.3</Version>
+    <Version>1.1.0</Version>
     <ApplicationIcon>../../assets/autoclicker.ico</ApplicationIcon>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
@@ -18,10 +18,9 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net.Http" />
-    <PackageReference Include="Velopack" Version="1.2.0" />
+    <Reference Include="System.Runtime.Serialization" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="All" />
     <InternalsVisibleTo Include="Autoclicker.Tests" />
     <EmbeddedResource Include="../../assets/autoclicker.ico" LogicalName="Autoclicker.AppIcon.ico" />
-    <None Include="../../THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

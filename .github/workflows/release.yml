@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'New version (for example 1.0.1)'
+        description: 'New version (for example 1.1.1)'
         required: true
         type: string
 permissions:
@@ -27,7 +27,7 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Use a version such as 1.0.1.' }
+          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Use a version such as 1.1.1.' }
           $releases = gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) { throw 'Could not read existing releases.' }
           foreach ($release in $releases) {
@@ -40,7 +40,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: ./scripts/build.ps1 -Version $env:RELEASE_VERSION -BuildRoot "$env:RUNNER_TEMP/autoclicker-build" -Package
-      - name: Publish installer and update feed
+      - name: Publish standalone EXE and update manifest
         shell: pwsh
         env:
           RELEASE_VERSION: ${{ inputs.version }}
