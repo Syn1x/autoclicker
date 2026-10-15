@@ -29,7 +29,7 @@ namespace Autoclicker
                 {
                     form.Opacity = 0;
                     form.ShowInTaskbar = false;
-                    ClickEngine fake = new ClickEngine(delegate { throw new Exception("The probe must not click."); });
+                    ClickEngine fake = new ClickEngine(delegate { }, delegate { });
                     typeof(ClickerForm).GetField("engine", Flags).SetValue(form, fake);
                     Timer timer = Field<Timer>(form, "timer");
                     timer.Tick -= (EventHandler)Delegate.CreateDelegate(typeof(EventHandler), form,

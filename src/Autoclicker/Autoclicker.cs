@@ -123,22 +123,28 @@ namespace Autoclicker
     // Scheduling is separated from mouse input so tests never send real clicks.
     internal sealed class ClickEngine
     {
-        private readonly Action click;
+        private readonly Action press;
+        private readonly Action release;
         private readonly Func<int, int, int> randomRange;
         private long nextDue;
+        private long releaseDue, nextPressAllowed;
         private int interval;
+        private int holdMs, gapMs;
         private bool varyTiming;
         public bool Active { get; private set; }
+        public bool ButtonDown { get; private set; }
         public long Count { get; private set; }
         public long StartsAt { get; private set; }
         public long StopsAt { get; private set; }
         public bool TimeLimitReached { get; private set; }
 
-        public ClickEngine(Action clickAction) : this(clickAction, new Random().Next) { }
+        public ClickEngine(Action pressAction, Action releaseAction)
+            : this(pressAction, releaseAction, new Random().Next) { }
 
-        internal ClickEngine(Action clickAction, Func<int, int, int> randomSource)
+        internal ClickEngine(Action pressAction, Action releaseAction, Func<int, int, int> randomSource)
         {
-            click = clickAction;
+            press = pressAction;
+            release = releaseAction;
             randomRange = randomSource;
         }
 
@@ -148,37 +154,71 @@ namespace Autoclicker
                 throw new ArgumentOutOfRangeException("intervalMs");
             if (delayMs < 0) throw new ArgumentOutOfRangeException("delayMs");
             if (durationMs < 0) throw new ArgumentOutOfRangeException("durationMs");
+            Stop();
             interval = intervalMs;
+            holdMs = Math.Min(20, intervalMs / 2);
+            gapMs = Math.Min(10, intervalMs / 4);
             varyTiming = variationEnabled;
             StartsAt = now + delayMs;
             StopsAt = durationMs == 0 ? 0 : StartsAt + durationMs;
             TimeLimitReached = false;
             nextDue = StartsAt;
+            nextPressAllowed = StartsAt;
             Count = 0;
             Active = true;
         }
 
-        public void Stop() { Active = false; }
+        public void Stop()
+        {
+            Active = false;
+            ReleaseButton();
+        }
+
+        private void ReleaseButton()
+        {
+            if (!ButtonDown) return;
+            release();
+            // Keep the pending release if Windows rejects it, so stopping or
+            // closing can retry instead of forgetting a held mouse button.
+            ButtonDown = false;
+        }
 
         public void Tick(long now, bool pointerIsOnThisApp)
         {
             if (!Active) return;
-            // Check the deadline before scheduling or sending any more input.
+            // Release on every stop path, even when a press is still in flight.
             if (StopsAt != 0 && now >= StopsAt)
             {
                 TimeLimitReached = true;
                 Stop();
                 return;
             }
-            if (now < nextDue) return;
             if (pointerIsOnThisApp)
             {
                 Stop();
                 return;
             }
-            try { click(); }
-            catch { Stop(); throw; }
-            Count++;
+            try
+            {
+                if (ButtonDown)
+                {
+                    if (now < releaseDue) return;
+                    ReleaseButton();
+                    nextPressAllowed = now + gapMs;
+                    return;
+                }
+                if (now < nextDue || now < nextPressAllowed) return;
+                press();
+                ButtonDown = true;
+                releaseDue = now + holdMs;
+                Count++;
+            }
+            catch
+            {
+                Active = false;
+                try { ReleaseButton(); } catch { }
+                throw;
+            }
             int nextInterval = interval;
             if (varyTiming)
             {
@@ -186,7 +226,8 @@ namespace Autoclicker
                 nextInterval += randomRange(-spread, spread + 1);
             }
             // Keep the average cadence, but never flood delayed input in a burst.
-            // Sampling one bounded interval adds no sleep or busy-wait work.
+            // Press/release are separate timer phases: no sleeps on the UI
+            // thread, and no zero-duration presses between game input polls.
             nextDue += nextInterval;
             if (nextDue <= now) nextDue = now + nextInterval;
         }
@@ -206,7 +247,8 @@ namespace Autoclicker
         private readonly int processId = Process.GetCurrentProcess().Id;
         private readonly Stopwatch clock = Stopwatch.StartNew();
         private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
-        private readonly ClickEngine engine = new ClickEngine(Native.LeftClick);
+        private readonly ClickEngine engine = new ClickEngine(Native.LeftDown, Native.LeftUp);
+        private ClickPulse clickPulse;
         private readonly Color accent = AppColors.InverseText;
         private readonly Color muted = AppColors.MutedText;
         private readonly Color soft = AppColors.SecondaryText;
@@ -476,7 +518,7 @@ namespace Autoclicker
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
-            engine.Stop();
+            try { engine.Stop(); } catch { }
             timer.Stop();
             if (hotkeys != null) hotkeys.Dispose();
             hotkeys = null;
@@ -509,7 +551,8 @@ namespace Autoclicker
                 return;
             }
             long now = clock.ElapsedMilliseconds;
-            engine.Start(now, (int)interval.Value, 0, variation.Checked, autoStop.Checked ? DurationMilliseconds : 0);
+            try { engine.Start(now, (int)interval.Value, 0, variation.Checked, autoStop.Checked ? DurationMilliseconds : 0); }
+            catch { StopClicking("Windows could not release the previous click. Press and release your left mouse button."); return; }
             UpdateAutoStopControls();
             UpdateAutoStopHint(now);
             interval.Enabled = false;
@@ -527,8 +570,10 @@ namespace Autoclicker
         private void StopClicking(string reason)
         {
             bool wasClicking = timer.Enabled;
-            engine.Stop();
+            try { engine.Stop(); }
+            catch { reason = "Windows could not release the click. Press and release your left mouse button."; }
             timer.Stop();
+            clickPulse.Lit = false;
             // The engine may already have stopped itself after an input error
             // or when the cursor moved onto this window. The timer remembers
             // that transition so these stops also receive the off cue.
@@ -558,6 +603,7 @@ namespace Autoclicker
                 StopClicking("Windows could not send a click. Clicking has stopped.");
                 return;
             }
+            RefreshClickActivity();
             if (!engine.Active)
             {
                 StopClicking(engine.TimeLimitReached
@@ -568,15 +614,21 @@ namespace Autoclicker
             UpdateAutoStopHint(now);
             status.Text = "Clicking";
             detail.Text = "Left clicks at your cursor.";
-            counter.Text = engine.Count.ToString("N0");
             Text = "Autoclicker - Clicking (" + KeyName + " toggles off)";
+        }
+
+        private void RefreshClickActivity()
+        {
+            clickPulse.Lit = engine.Active && engine.ButtonDown;
+            counter.Text = engine.Count.ToString("N0");
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                engine.Stop(); timer.Dispose();
+                try { engine.Stop(); } catch { }
+                timer.Dispose();
                 if (crosshairSettings != null) { crosshairSettings.Dispose(); crosshairSettings = null; }
                 crosshair.Dispose();
             }
@@ -1014,28 +1066,25 @@ namespace Autoclicker
             return pid == (uint)processId;
         }
 
-        internal static Input[] CreateClick()
+        internal static Input CreateMouseButton(uint flags)
         {
-            Input down = new Input();
-            down.Data.Mouse.Flags = 0x0002;
-            Input up = new Input();
-            up.Data.Mouse.Flags = 0x0004;
-            return new Input[] { down, up };
+            Input input = new Input();
+            input.Data.Mouse.Flags = flags;
+            return input;
         }
 
-        internal static void LeftClick()
+        internal static void LeftDown() { SendMouseButton(0x0002); }
+        internal static void LeftUp() { SendMouseButton(0x0004); }
+
+        private static void SendMouseButton(uint flags)
         {
-            Input[] inputs = CreateClick();
-            uint sent = SendInput(2, inputs, Marshal.SizeOf(typeof(Input)));
-            if (sent != 2)
-            {
-                if (sent == 1) SendInput(1, new Input[] { inputs[1] }, Marshal.SizeOf(typeof(Input)));
-                throw new InvalidOperationException("SendInput did not accept both mouse events.");
-            }
+            Input input = CreateMouseButton(flags);
+            if (SendInput(1, new Input[] { input }, Marshal.SizeOf(typeof(Input))) != 1)
+                throw new InvalidOperationException("Windows did not accept the mouse button event.");
         }
     }
 
-    internal static class Verification
+    internal static partial class Verification
     {
         private static void Check(bool condition, string description)
         {
@@ -1105,124 +1154,9 @@ namespace Autoclicker
                     hotkeys.Dispose();
                     Check(!hotkeys.Active, "Closing must remove the keyboard hook.");
                 }
-                int clicks = 0;
-                ClickEngine engine = new ClickEngine(delegate { clicks++; });
-                engine.Tick(0, false);
-                Check(clicks == 0, "Idle must not click.");
-                engine.Start(0, 50, 3000);
-                engine.Tick(2999, false);
-                Check(clicks == 0, "Countdown must not click early.");
-                engine.Tick(3000, false);
-                engine.Tick(3049, false);
-                Check(clicks == 1, "Interval must be respected.");
-                engine.Tick(3050, false);
-                Check(clicks == 2 && engine.Count == 2, "Scheduled click and count.");
-                engine.Stop();
-                engine.Tick(10000, false);
-                Check(clicks == 2, "Stopping must cancel future clicks.");
-                engine.Start(10000, 20, 0);
-                engine.Tick(10000, false);
-                Check(engine.Count == 1, "Restart must reset counter and click immediately.");
-                engine.Tick(20000, false);
-                engine.Tick(20000, false);
-                Check(engine.Count == 2, "Late ticks must never create a catch-up burst.");
-                engine.Tick(20020, true);
-                Check(!engine.Active && engine.Count == 2, "Own window must stop clicking.");
-                engine.Start(30000, 50, 3000);
-                engine.Stop();
-                engine.Tick(33000, false);
-                Check(engine.Count == 0, "Stop must cancel countdown.");
-                ClickEngine timed = new ClickEngine(delegate { });
-                timed.Start(1000, 2000, 0, false, 1000);
-                timed.Tick(1000, false);
-                timed.Tick(1999, false);
-                Check(timed.Active && timed.Count == 1, "A timed run must click immediately and remain active before expiry.");
-                timed.Tick(2000, false);
-                Check(!timed.Active && timed.TimeLimitReached && timed.Count == 1,
-                    "Expiry must stop even when the next click is not due yet.");
-                timed.Start(3000, 50, 0, false, 1000);
-                Check(!timed.TimeLimitReached && timed.StopsAt == 4000, "Restart must reset the full duration and expiry state.");
-                for (int time = 3000; time <= 4000; time += 50) timed.Tick(time, false);
-                Check(!timed.Active && timed.Count == 20, "No click may be sent at the deadline.");
-                timed.Start(5000, 50, 0, true, 1000);
-                timed.Tick(5000, false);
-                timed.Tick(9000, false);
-                Check(!timed.Active && timed.TimeLimitReached && timed.Count == 1,
-                    "A delayed tick must stop without a late click, including with variation.");
-                timed.Start(10000, 50, 0, false, 1000);
-                timed.Stop();
-                timed.Tick(12000, false);
-                Check(!timed.TimeLimitReached && timed.Count == 0, "Manual stop must cancel the timed run.");
-                timed.Start(13000, 50, 0);
-                timed.Tick(100000, false);
-                Check(timed.Active && timed.StopsAt == 0, "Turning the timer off must clear the previous deadline.");
-                bool badDurationRejected = false;
-                try { timed.Start(0, 50, 0, false, -1); }
-                catch (ArgumentOutOfRangeException) { badDurationRejected = true; }
-                Check(badDurationRejected, "Negative durations must be rejected.");
-                int cadenceClicks = 0;
-                ClickEngine cadence = new ClickEngine(delegate { cadenceClicks++; });
-                cadence.Start(0, 50, 0);
-                for (int time = 0; time < 10000; time += 16) cadence.Tick(time, false);
-                Check(cadenceClicks == 200, "Cadence must average 20 clicks/second at a 16 ms timer granularity.");
-                Random seededRandom = new Random(182);
-                long simulatedTime = 0;
-                long previousClick = -1;
-                long minimumGap = long.MaxValue;
-                long maximumGap = 0;
-                ClickEngine varied = new ClickEngine(delegate
-                {
-                    if (previousClick >= 0)
-                    {
-                        long gap = simulatedTime - previousClick;
-                        Check(gap >= 45 && gap <= 55, "Varied targets must stay within +/-10 percent.");
-                        minimumGap = Math.Min(minimumGap, gap);
-                        maximumGap = Math.Max(maximumGap, gap);
-                    }
-                    previousClick = simulatedTime;
-                }, seededRandom.Next);
-                varied.Start(0, 50, 0, true);
-                for (simulatedTime = 0; simulatedTime < 60000; simulatedTime++) varied.Tick(simulatedTime, false);
-                Check(minimumGap == 45 && maximumGap == 55, "Variation must produce different click intervals.");
-                double averageGap = previousClick / (double)(varied.Count - 1);
-                Check(averageGap > 49.5 && averageGap < 50.5, "Variation must preserve the average target speed.");
-                long variedCount = varied.Count;
-                varied.Stop();
-                varied.Tick(100000, false);
-                Check(varied.Count == variedCount, "Stop must immediately cancel a pending varied click.");
-                ClickEngine variationDisabled = new ClickEngine(delegate { }, delegate(int min, int max)
-                {
-                    throw new Exception("Disabled variation must not request randomness.");
-                });
-                variationDisabled.Start(0, 50, 0, false);
-                variationDisabled.Tick(0, false);
-                variationDisabled.Tick(49, false);
-                Check(variationDisabled.Count == 1, "Disabled variation must retain fixed timing.");
-                variationDisabled.Tick(50, false);
-                Check(variationDisabled.Count == 2, "Disabled variation must retain fixed cadence.");
-                ClickEngine delayedVariation = new ClickEngine(delegate { }, new Random(183).Next);
-                delayedVariation.Start(0, 50, 3000, true);
-                delayedVariation.Tick(2999, false);
-                Check(delayedVariation.Count == 0, "Variation must respect the start countdown.");
-                delayedVariation.Tick(3000, false);
-                delayedVariation.Tick(10000, false);
-                delayedVariation.Tick(10000, false);
-                Check(delayedVariation.Count == 2, "Varied clicks must not catch up in a burst after a stall.");
-                ClickEngine coarseTimer = new ClickEngine(delegate { }, new Random(184).Next);
-                coarseTimer.Start(0, 50, 0, true);
-                for (int time = 0; time < 60000; time += 16) coarseTimer.Tick(time, false);
-                Check(coarseTimer.Count >= 1188 && coarseTimer.Count <= 1212,
-                    "Varied timing must stay near 20 clicks/second with realistic timer granularity.");
-                bool badIntervalRejected = false;
-                try { cadence.Start(0, 0, 0); }
-                catch (ArgumentOutOfRangeException) { badIntervalRejected = true; }
-                Check(badIntervalRejected, "Invalid intervals must be rejected.");
-                ClickEngine failure = new ClickEngine(delegate { throw new InvalidOperationException(); });
-                failure.Start(0, 50, 0);
-                try { failure.Tick(0, false); } catch (InvalidOperationException) { }
-                Check(!failure.Active && failure.Count == 0, "Input failure must stop clicking.");
+                double averageGap = VerifyClickTiming();
                 Check(Marshal.SizeOf(typeof(Native.Input)) == (IntPtr.Size == 8 ? 40 : 28), "Windows INPUT structure size.");
-                Native.Input[] pair = Native.CreateClick();
+                Native.Input[] pair = new[] { Native.CreateMouseButton(2), Native.CreateMouseButton(4) };
                 Check(pair.Length == 2 && pair[0].Type == 0 && pair[1].Type == 0 &&
                     pair[0].Data.Mouse.Flags == 2 && pair[1].Data.Mouse.Flags == 4,
                     "Each click must pair left-down with left-up, without moving the pointer.");

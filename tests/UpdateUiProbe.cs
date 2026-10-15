@@ -44,7 +44,7 @@ namespace Autoclicker
                 Snapshot(form, Path.Combine(root, "update-restart.png"));
 
                 // A fake click engine validates stop-on-restart without sending input.
-                var engine = new ClickEngine(delegate { throw new Exception("Update UI probe must never click."); });
+                var engine = new ClickEngine(delegate { throw new Exception("Update UI probe must never click."); }, delegate { });
                 typeof(ClickerForm).GetField("engine", Fields).SetValue(form, engine);
                 engine.Start(0, 50, 0);
                 backend.FailApply = true;

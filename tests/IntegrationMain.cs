@@ -41,6 +41,7 @@ namespace Autoclicker
                         new object[] { new string[] { Path.Combine(root, probe.Name + ".txt") } });
                     Check(code == 0, probe.Name + " failed.");
                 }
+                ClickPulseProbe.Run(root);
                 CrosshairProbe.Run(root);
                 InputCommitProbe.Run(root);
                 UpdateUiProbe.Run(root);

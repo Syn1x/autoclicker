@@ -27,7 +27,10 @@ namespace Autoclicker
             Label title = AddLabel(header, "Autoclicker", 19, 13, 198, 34, 17F, ForeColor, false);
             AttachWindowDrag(header);
             AttachWindowDrag(title);
-            status = AddLabel(header, "Stopped", 225, 19, 122, 25, 8F, muted, false);
+            clickPulse = new ClickPulse { BackColor = header.BackColor };
+            clickPulse.SetBounds(228, 24, 14, 14);
+            header.Controls.Add(clickPulse);
+            status = AddLabel(header, "Stopped", 249, 19, 98, 25, 8F, muted, false);
             status.TextAlign = ContentAlignment.MiddleCenter;
             status.BackColor = AppColors.Button;
             Button minimize = MakeButton("−", 364, 16, 28, header.BackColor, soft);

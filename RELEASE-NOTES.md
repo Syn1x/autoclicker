@@ -1,10 +1,9 @@
-Autoclicker 1.5.0 simplifies the interface into one compact window.
+Autoclicker 1.5.1 adds click activity feedback and improves mouse press timing.
 
-- Switch between **Clicker** and **Crosshair** tabs instead of opening a second settings window.
-- Replaces oversized cards and repeated headings with aligned rows and consistent spacing.
-- Uses slimmer sliders for crosshair size, thickness, and color, with mouse, keyboard, and accessibility support.
-- Keeps Stop and update controls in a consistent position on both tabs.
-- Preserves hotkeys, the stop timer, sound cues, click variation, all crosshair options, centered inputs, and click-away editing.
-- Switching tabs commits pending edits and keeps an enabled crosshair visible.
+- A small green dot beside the status pulses for each mouse press accepted by Windows. This indicates sent input, not confirmation that the game registered it.
+- Separates mouse-down and mouse-up with a short hold (20 ms at the default 50 ms interval), so applications that sample button state have time to observe the press.
+- Keeps a brief released interval between presses, including after a delayed timer tick, without blocking the interface or moving the cursor.
+- Releases a held click when you toggle off with F11, press Stop, reach the stop timer, move onto Autoclicker, or close the app.
+- Preserves the default 20-clicks-per-second target, timing variation, custom hotkeys, and crosshair settings. Actual timing depends on Windows scheduling; game compatibility is not guaranteed.
 
 Choose **Check for updates → Confirm update → Restart to update**. Versions before 1.3.0 apply on close and need to be reopened manually. You can also download **autoclicker.exe** directly; it is still one portable file.
