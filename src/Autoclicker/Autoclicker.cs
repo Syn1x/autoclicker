@@ -249,6 +249,9 @@ namespace Autoclicker
         private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
         private readonly ClickEngine engine = new ClickEngine(Native.LeftDown, Native.LeftUp);
         private ClickPulse clickPulse;
+        private CursorPulseFeedback cursorPulse;
+        private bool cursorPulseUnavailable;
+        private long cursorPulseCount;
         private readonly Color accent = AppColors.InverseText;
         private readonly Color muted = AppColors.MutedText;
         private readonly Color soft = AppColors.SecondaryText;
@@ -520,6 +523,7 @@ namespace Autoclicker
         {
             try { engine.Stop(); } catch { }
             timer.Stop();
+            if (cursorPulse != null) cursorPulse.Hide();
             if (hotkeys != null) hotkeys.Dispose();
             hotkeys = null;
             base.OnHandleDestroyed(e);
@@ -553,6 +557,8 @@ namespace Autoclicker
             long now = clock.ElapsedMilliseconds;
             try { engine.Start(now, (int)interval.Value, 0, variation.Checked, autoStop.Checked ? DurationMilliseconds : 0); }
             catch { StopClicking("Windows could not release the previous click. Press and release your left mouse button."); return; }
+            cursorPulseUnavailable = false;
+            cursorPulseCount = 0;
             UpdateAutoStopControls();
             UpdateAutoStopHint(now);
             interval.Enabled = false;
@@ -574,6 +580,8 @@ namespace Autoclicker
             catch { reason = "Windows could not release the click. Press and release your left mouse button."; }
             timer.Stop();
             clickPulse.Lit = false;
+            if (cursorPulse != null) cursorPulse.Hide();
+            cursorPulseCount = 0;
             // The engine may already have stopped itself after an input error
             // or when the cursor moved onto this window. The timer remembers
             // that transition so these stops also receive the off cue.
@@ -613,7 +621,7 @@ namespace Autoclicker
             }
             UpdateAutoStopHint(now);
             status.Text = "Clicking";
-            detail.Text = "Left clicks at your cursor.";
+            detail.Text = cursorPulseUnavailable ? "Clicking. Cursor indicator unavailable." : "Left clicks at your cursor.";
             Text = "Autoclicker - Clicking (" + KeyName + " toggles off)";
         }
 
@@ -621,6 +629,26 @@ namespace Autoclicker
         {
             clickPulse.Lit = engine.Active && engine.ButtonDown;
             counter.Text = engine.Count.ToString("N0");
+            if (!engine.Active)
+            {
+                if (cursorPulse != null) cursorPulse.Hide();
+                cursorPulseCount = 0;
+                return;
+            }
+            if (cursorPulseUnavailable) return;
+            try
+            {
+                bool clicked = engine.Count > cursorPulseCount;
+                cursorPulseCount = engine.Count;
+                if (clicked && cursorPulse == null) cursorPulse = new CursorPulseFeedback();
+                if (cursorPulse != null) cursorPulse.Update(clock.ElapsedMilliseconds, Cursor.Position, clicked);
+            }
+            catch
+            {
+                // Feedback failure must not interrupt clicking or hold input.
+                cursorPulseUnavailable = true;
+                if (cursorPulse != null) { cursorPulse.Dispose(); cursorPulse = null; }
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -629,6 +657,7 @@ namespace Autoclicker
             {
                 try { engine.Stop(); } catch { }
                 timer.Dispose();
+                if (cursorPulse != null) { cursorPulse.Dispose(); cursorPulse = null; }
                 if (crosshairSettings != null) { crosshairSettings.Dispose(); crosshairSettings = null; }
                 crosshair.Dispose();
             }

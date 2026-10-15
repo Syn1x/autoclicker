@@ -1,9 +1,10 @@
-Autoclicker 1.5.1 adds click activity feedback and improves mouse press timing.
+Autoclicker 1.5.2 adds glowing click ripples at your cursor.
 
-- A small green dot beside the status pulses for each mouse press accepted by Windows. This indicates sent input, not confirmation that the game registered it.
-- Separates mouse-down and mouse-up with a short hold (20 ms at the default 50 ms interval), so applications that sample button state have time to observe the press.
-- Keeps a brief released interval between presses, including after a delayed timer tick, without blocking the interface or moving the cursor.
-- Releases a held click when you toggle off with F11, press Stop, reach the stop timer, move onto Autoclicker, or close the app.
-- Preserves the default 20-clicks-per-second target, timing variation, custom hotkeys, and crosshair settings. Actual timing depends on Windows scheduling; game compatibility is not guaranteed.
+- Each accepted mouse press creates a small green glow ring at the cursor tip. It expands and fades away over 180 ms.
+- Successive rings animate independently, staying where each click happened as the pointer moves.
+- Stays visible when Autoclicker is minimized or covered by a windowed/borderless game, and disappears when clicking stops.
+- Passes mouse input through and never takes focus or changes the cursor position.
+- Reuses the existing click timer, cached animation frames, and a bounded pool of small overlay windows to keep the effect lightweight.
+- Keeps the status-bar pulse, crosshair, and click timing improvements from v1.5.1. The indicator confirms sent input, not game registration. Exclusive-fullscreen games may hide desktop overlays.
 
 Choose **Check for updates → Confirm update → Restart to update**. Versions before 1.3.0 apply on close and need to be reopened manually. You can also download **autoclicker.exe** directly; it is still one portable file.

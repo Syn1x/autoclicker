@@ -42,6 +42,7 @@ namespace Autoclicker
                     Check(code == 0, probe.Name + " failed.");
                 }
                 ClickPulseProbe.Run(root);
+                CursorRippleProbe.Run(root);
                 CrosshairProbe.Run(root);
                 InputCommitProbe.Run(root);
                 UpdateUiProbe.Run(root);
