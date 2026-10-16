@@ -48,6 +48,7 @@ namespace Autoclicker
                 }
                 ClickPulseProbe.Run(root);
                 CursorRippleProbe.Run(root);
+                ReleaseNotesProbe.Run(root);
                 CrosshairProbe.Run(root);
                 InputCommitProbe.Run(root);
                 UpdateUiProbe.Run(root);

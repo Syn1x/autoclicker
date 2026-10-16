@@ -81,6 +81,7 @@ namespace Autoclicker
                     using (ClickerForm form = new ClickerForm(true))
                     {
                         form.AttachUpdates(updates);
+                        form.EnableReleaseNotesOnLaunch();
                         Application.Run(form);
                     }
                     updates.Dispose();
@@ -547,6 +548,7 @@ namespace Autoclicker
 
         private void StartClicking()
         {
+            if (releaseNotesWindow != null) return;
             if (choosingKey || hotkeys == null || !hotkeys.Active) return;
             Validate();
             if (autoStop.Checked && DurationMilliseconds == 0)
@@ -657,6 +659,7 @@ namespace Autoclicker
             {
                 try { engine.Stop(); } catch { }
                 timer.Dispose();
+                if (releaseNotesWindow != null) releaseNotesWindow.Close();
                 if (cursorPulse != null) { cursorPulse.Dispose(); cursorPulse = null; }
                 if (crosshairSettings != null) { crosshairSettings.Dispose(); crosshairSettings = null; }
                 crosshair.Dispose();

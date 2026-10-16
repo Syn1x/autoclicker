@@ -4,7 +4,7 @@
     <TargetFramework>net48</TargetFramework>
     <AssemblyName>Autoclicker</AssemblyName>
     <RootNamespace>Autoclicker</RootNamespace>
-    <Version>1.5.3</Version>
+    <Version>1.5.4</Version>
     <ApplicationIcon>../../assets/autoclicker.ico</ApplicationIcon>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
@@ -22,5 +22,6 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="All" />
     <InternalsVisibleTo Include="Autoclicker.Tests" />
     <EmbeddedResource Include="../../assets/autoclicker.ico" LogicalName="Autoclicker.AppIcon.ico" />
+    <EmbeddedResource Include="../../RELEASE-NOTES.md" LogicalName="Autoclicker.ReleaseNotes.md" />
   </ItemGroup>
 </Project>

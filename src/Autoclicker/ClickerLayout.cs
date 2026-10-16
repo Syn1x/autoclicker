@@ -143,7 +143,13 @@ namespace Autoclicker
 
             AddDivider(footerPanel, 0, 88, 420, 1);
             updateStatus = AddLabel(footerPanel, "Checks for updates on launch", 0, 98, 266, 32, 8F, muted, false);
-            AddLabel(footerPanel, "v" + AppInfo.Version, 0, 133, 200, 15, 7F, muted, false);
+            releaseNotesLink = new LinkLabel { Text = "v" + AppInfo.Version + " · What's new", AutoSize = false,
+                Font = new Font("Segoe UI", 7F), LinkColor = muted, ActiveLinkColor = ForeColor,
+                VisitedLinkColor = muted, LinkBehavior = LinkBehavior.HoverUnderline,
+                AccessibleName = "Read release notes for version " + AppInfo.Version };
+            releaseNotesLink.SetBounds(0, 133, 260, 15);
+            releaseNotesLink.LinkClicked += delegate { ShowReleaseNotes(); };
+            footerPanel.Controls.Add(releaseNotesLink);
             checkUpdates = MakeButton("Check for updates", 274, 97, 146, AppColors.Button, soft);
             checkUpdates.Parent = footerPanel;
             checkUpdates.Height = 32;
