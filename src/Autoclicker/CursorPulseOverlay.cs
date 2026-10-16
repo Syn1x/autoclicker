@@ -14,18 +14,32 @@ namespace Autoclicker
         internal const int DurationMs = 180;
         internal const int FrameCount = 13;
         internal const int MaxRings = 12;
+        internal const int HueSteps = 72;
+        internal const int ColorCycleMs = 6000;
         private readonly List<CursorPulseOverlay> rings = new List<CursorPulseOverlay>();
-        private readonly Bitmap[] frames = new Bitmap[FrameCount];
+        // Five-degree hue steps, populated lazily: at most ~15 MiB of pixels.
+        // Once cached, animation and repeated color cycles only upload frames.
+        private readonly Bitmap[,] frames = new Bitmap[HueSteps, FrameCount];
         internal IList<CursorPulseOverlay> Rings { get { return rings.AsReadOnly(); } }
 
-        internal CursorPulseFeedback()
+        internal static int HueIndexAt(long now)
         {
-            try
-            {
-                for (int i = 0; i < frames.Length; i++)
-                    frames[i] = CreateFrame(i / (float)(FrameCount - 1));
-            }
-            catch { Dispose(); throw; }
+            long phase = ((now % ColorCycleMs) + ColorCycleMs) % ColorCycleMs;
+            return (int)(phase * HueSteps / ColorCycleMs);
+        }
+
+        internal static Color SpectrumColor(int hueIndex)
+        {
+            Color hue = CrosshairOptions.HueColor(hueIndex * 360 / HueSteps);
+            // Lift the darkest channels slightly so blue remains visible too.
+            return Color.FromArgb(60 + hue.R * 195 / 255, 60 + hue.G * 195 / 255, 60 + hue.B * 195 / 255);
+        }
+
+        internal Bitmap GetFrame(int hueIndex, int frame)
+        {
+            if (frames[hueIndex, frame] == null)
+                frames[hueIndex, frame] = CreateFrame(frame / (float)(FrameCount - 1), hueIndex);
+            return frames[hueIndex, frame];
         }
 
         internal void Update(long now, Point cursor, bool emit)
@@ -49,7 +63,7 @@ namespace Autoclicker
                         if (ring.StartedAt < available.StartedAt) available = ring;
                 }
             }
-            available.Begin(cursor, now);
+            available.Begin(cursor, now, HueIndexAt(now));
             Animate(available, now);
         }
 
@@ -59,7 +73,7 @@ namespace Autoclicker
             long elapsed = Math.Max(0, now - ring.StartedAt);
             if (elapsed >= DurationMs) { ring.Stop(); return; }
             int frame = (int)(elapsed * (FrameCount - 1) / DurationMs);
-            ring.ShowFrame(frames[frame], frame);
+            ring.ShowFrame(GetFrame(ring.HueIndex, frame), frame);
         }
 
         internal void Hide()
@@ -67,7 +81,7 @@ namespace Autoclicker
             foreach (CursorPulseOverlay ring in rings) ring.Stop();
         }
 
-        internal static Bitmap CreateFrame(float progress)
+        internal static Bitmap CreateFrame(float progress, int hueIndex = 0)
         {
             progress = Math.Max(0, Math.Min(1, progress));
             var image = new Bitmap(CursorPulseOverlay.PulseSize, CursorPulseOverlay.PulseSize, PixelFormat.Format32bppPArgb);
@@ -79,10 +93,11 @@ namespace Autoclicker
                 float center = CursorPulseOverlay.PulseSize / 2F;
                 var bounds = new RectangleF(center - radius, center - radius, radius * 2, radius * 2);
                 float fade = (float)Math.Pow(1 - progress, 1.5);
+                Color color = SpectrumColor(hueIndex);
                 foreach (int width in new[] { 10, 6, 2 })
                 {
                     int alpha = (int)((width == 2 ? 240 : width == 6 ? 55 : 20) * fade);
-                    using (var pen = new Pen(Color.FromArgb(alpha, 116, 245, 166), width))
+                    using (var pen = new Pen(Color.FromArgb(alpha, color), width))
                         graphics.DrawEllipse(pen, bounds);
                 }
             }
@@ -105,6 +120,7 @@ namespace Autoclicker
         internal bool Active { get; private set; }
         internal long StartedAt { get; private set; }
         internal Point Origin { get; private set; }
+        internal int HueIndex { get; private set; }
         internal int FrameIndex { get; private set; } = -1;
 
         internal CursorPulseOverlay()
@@ -143,10 +159,11 @@ namespace Autoclicker
             base.OnHandleDestroyed(e);
         }
 
-        internal void Begin(Point cursor, long now)
+        internal void Begin(Point cursor, long now, int hueIndex)
         {
             Origin = cursor;
             StartedAt = now;
+            HueIndex = hueIndex;
             FrameIndex = -1;
             Active = true;
             Bounds = new Rectangle(CenteredLocation(cursor), new Size(PulseSize, PulseSize));

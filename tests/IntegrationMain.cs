@@ -30,6 +30,11 @@ namespace Autoclicker
                 Native.SetProcessDPIAware();
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
+                if (args.Length == 2 && args[0] == "--preview-rgb")
+                {
+                    RgbPulsePreview.Render(Path.GetFullPath(args[1]));
+                    return 0;
+                }
                 string root = Path.GetFullPath(args[0]);
                 Directory.CreateDirectory(root);
                 TestUpdates().GetAwaiter().GetResult();

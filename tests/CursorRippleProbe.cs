@@ -33,6 +33,14 @@ namespace Autoclicker
 
         internal static void Run(string root)
         {
+            Check(CursorPulseFeedback.HueIndexAt(0) == CursorPulseFeedback.HueIndexAt(CursorPulseFeedback.ColorCycleMs) &&
+                CursorPulseFeedback.HueIndexAt(-1) == CursorPulseFeedback.HueIndexAt(CursorPulseFeedback.ColorCycleMs - 1),
+                "The spectrum must wrap cleanly at the cycle boundary.");
+            Color red = CursorPulseFeedback.SpectrumColor(CursorPulseFeedback.HueIndexAt(0));
+            Color green = CursorPulseFeedback.SpectrumColor(CursorPulseFeedback.HueIndexAt(2000));
+            Color blue = CursorPulseFeedback.SpectrumColor(CursorPulseFeedback.HueIndexAt(4000));
+            Check(red.R > red.G && red.R > red.B && green.G > green.R && green.G > green.B && blue.B > blue.R && blue.B > blue.G,
+                "Each color cycle must pass through red, green, and blue.");
             foreach (Point point in new[] { new Point(0, 0), new Point(-1920, -120), new Point(3839, 2159) })
                 Check(CursorPulseOverlay.CenteredLocation(point) + new Size(32, 32) == point,
                     "Screen edges and negative coordinates must retain the exact click origin.");
@@ -76,6 +84,7 @@ namespace Autoclicker
 
             using (var feedback = new CursorPulseFeedback())
             {
+                Check(ReferenceEquals(feedback.GetFrame(0, 4), feedback.GetFrame(0, 4)), "The same color and animation phase must reuse its cached bitmap.");
                 IntPtr foreground = GetForegroundWindow();
                 Point first = new Point(Screen.PrimaryScreen.Bounds.Left + 150, Screen.PrimaryScreen.Bounds.Top + 150);
                 Point second = first + new Size(70, 45);
@@ -104,8 +113,13 @@ namespace Autoclicker
                 Check(feedback.Rings.All(r => !r.Visible && !r.Active), "All rings must disappear after they dissipate.");
                 IntPtr reused = a.Handle;
                 feedback.Update(300, second, true);
-                Check(feedback.Rings.Count == 2 && feedback.Rings[0].Handle == reused, "Expired windows must be reused.");
-                for (int t = 301; t < 350; t++) feedback.Update(t, first, true);
+                Check(feedback.Rings.Count == 2 && feedback.Rings[0].Handle == reused &&
+                    feedback.Rings[0].HueIndex == CursorPulseFeedback.HueIndexAt(300),
+                    "Reused windows must start in the current spectrum color.");
+                int heldHue = feedback.Rings[0].HueIndex;
+                feedback.Update(340, first, false);
+                Check(feedback.Rings[0].HueIndex == heldHue, "Each expanding ring must keep its birth color without flickering between cached palettes.");
+                for (int t = 341; t < 390; t++) feedback.Update(t, first, true);
                 Check(feedback.Rings.Count <= CursorPulseFeedback.MaxRings, "Even extreme click bursts must use a bounded window pool.");
                 Check(GetForegroundWindow() == foreground, "Animating rings must not steal focus.");
                 feedback.Hide();
@@ -159,7 +173,7 @@ namespace Autoclicker
                 Check(!down && form.IsDisposed && handles.All(h => !IsWindow(h)), "Closing must release input and destroy every overlay.");
             }
             File.WriteAllText(Path.Combine(root, "cursor-ripple.txt"),
-                "PASS: expanding/fading transparent glow, complete dissipation, exact click origins, independent overlapping ripples, click-through/no-focus windows, cached frames and bounded window reuse, minimized visibility, no duplicate or rejected-click ripples, stop/expiry/close cleanup. No real mouse or keyboard input was sent.");
+                "PASS: RGB spectrum cycle and wraparound, stable color per ring, cached color-frame reuse, expanding/fading transparent glow, complete dissipation, exact click origins, independent overlapping ripples, click-through/no-focus windows, bounded window reuse, minimized visibility, no duplicate or rejected-click ripples, stop/expiry/close cleanup. No real mouse or keyboard input was sent.");
         }
     }
 }
